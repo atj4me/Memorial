@@ -1,4 +1,4 @@
-/* Memorial — private memorial-messaging app.
+/* Starbound — private letters to the stars.
  * Vanilla JS, no dependencies, no network calls. All data in IndexedDB, local only. */
 'use strict';
 
@@ -446,7 +446,7 @@ async function exportAll() {
   const spaces = await store.spaces.all();
   const messages = await store.messages.all();
   const payload = {
-    app: 'memorial', version: 1,
+    app: 'starbound', version: 1,
     exportedAt: new Date().toISOString(),
     spaces, messages,
   };
@@ -454,7 +454,7 @@ async function exportAll() {
   const mb = json.length / 1048576;
   const date = new Date().toISOString().slice(0, 10);
   if (mb > 25 && !confirm(`This backup is about ${mb.toFixed(0)} MB (videos can be large). Download anyway?`)) return;
-  download(`memorial-backup-${date}.json`, json);
+  download(`starbound-backup-${date}.json`, json);
 }
 
 function importAll(file) {
@@ -464,7 +464,7 @@ function importAll(file) {
     try { data = JSON.parse(reader.result); }
     catch (e) { alert('That file is not valid JSON.'); return; }
     if (!data || !Array.isArray(data.spaces) || !Array.isArray(data.messages)) {
-      alert('That file does not look like a Memorial backup.');
+      alert('That file does not look like a Starbound backup.');
       return;
     }
     if (!confirm(`Import this backup? It will REPLACE everything currently here (${data.spaces.length} spaces, ${data.messages.length} messages).`)) return;

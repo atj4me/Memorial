@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="A private memorial space. Write to those you miss — everything stays on your device.">
-<title>Memorial — letters to those we miss</title>
+<meta name="description" content="Starbound — a private space for the words you still need to say. Write to those you miss, or to yourself — everything stays on your device.">
+<title>Starbound — letters to the stars</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <header class="topbar">
   <div class="brand">
-    <span class="brand-mark" aria-hidden="true">🕯️</span>
-    <span class="brand-name">Memorial</span>
+    <span class="brand-mark" aria-hidden="true">✨</span>
+    <span class="brand-name">Starbound</span>
   </div>
   <div class="top-actions">
     <button id="btn-export" class="btn btn-ghost" type="button">Export</button>
@@ -30,7 +30,7 @@
 <main id="view-spaces" class="view">
   <div id="spaces-empty" class="empty" hidden>
     <p class="empty-title">No spaces yet</p>
-    <p class="empty-sub">Create a space for someone you miss —<br>a place to keep talking to them.</p>
+    <p class="empty-sub">Create a space — for someone you miss, or for yourself.<br>A place to keep the words flowing.</p>
   </div>
   <div id="spaces-grid" class="spaces-grid"></div>
   <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New space</button>
@@ -54,17 +54,17 @@
   </section>
 
   <section id="timeline" class="timeline" aria-live="polite"></section>
-  <p id="timeline-empty" class="empty-sub center" hidden>Nothing here yet. Write the first letter below.</p>
+  <p id="timeline-empty" class="empty-sub center" hidden>Nothing here yet — write the first one below.</p>
 
   <section class="composer" aria-label="New message">
     <div id="pending" class="pending"></div>
     <label class="sr-only" for="composer-text">Write a message</label>
-    <textarea id="composer-text" rows="2" placeholder="Write to them…"></textarea>
+    <textarea id="composer-text" rows="2" placeholder="Write…"></textarea>
     <div class="composer-row">
       <button id="btn-attach-photo" class="btn btn-icon" type="button" title="Attach a photo" aria-label="Attach a photo">📷</button>
       <button id="btn-attach-video" class="btn btn-icon" type="button" title="Attach a video" aria-label="Attach a video">🎬</button>
       <button id="btn-record" class="btn btn-icon" type="button" title="Record a voice note" aria-label="Record a voice note">🎙️</button>
-      <button id="btn-send" class="btn btn-primary" type="button">Send</button>
+      <button id="btn-send" class="btn btn-primary" type="button">Release</button>
     </div>
     <div id="recorder" class="recorder" hidden>
       <span class="rec-dot" aria-hidden="true"></span>
