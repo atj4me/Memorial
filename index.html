@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A private memorial space. Write to those you miss — everything stays on your device.">
+<title>Memorial — letters to those we miss</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">🕯️</span>
+    <span class="brand-name">Memorial</span>
+  </div>
+  <div class="top-actions">
+    <button id="btn-export" class="btn btn-ghost" type="button">Export</button>
+    <button id="btn-import" class="btn btn-ghost" type="button">Import</button>
+    <input type="file" id="import-file" accept="application/json,.json" hidden>
+  </div>
+</header>
+
+<p class="privacy-note">
+  <span aria-hidden="true">🔒</span>
+  Private by design — everything you write or upload stays in this browser, on this device. Nothing is ever sent anywhere.
+</p>
+
+<!-- ============ SPACES LIST ============ -->
+<main id="view-spaces" class="view">
+  <div id="spaces-empty" class="empty" hidden>
+    <p class="empty-title">No spaces yet</p>
+    <p class="empty-sub">Create a space for someone you miss —<br>a place to keep talking to them.</p>
+  </div>
+  <div id="spaces-grid" class="spaces-grid"></div>
+  <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New space</button>
+</main>
+
+<!-- ============ SPACE DETAIL ============ -->
+<main id="view-space" class="view" hidden>
+  <button id="btn-back" class="btn btn-ghost btn-back" type="button">← All spaces</button>
+
+  <section class="space-hero">
+    <img id="space-photo" class="space-photo" alt="" hidden>
+    <div class="space-hero-text">
+      <h1 id="space-name"></h1>
+      <p id="space-dates" class="space-dates"></p>
+      <p id="space-dedication" class="space-dedication"></p>
+    </div>
+    <div class="space-hero-actions">
+      <button id="btn-edit-space" class="btn btn-ghost" type="button">Edit</button>
+      <button id="btn-delete-space" class="btn btn-danger-ghost" type="button">Delete</button>
+    </div>
+  </section>
+
+  <section id="timeline" class="timeline" aria-live="polite"></section>
+  <p id="timeline-empty" class="empty-sub center" hidden>Nothing here yet. Write the first letter below.</p>
+
+  <section class="composer" aria-label="New message">
+    <div id="pending" class="pending"></div>
+    <label class="sr-only" for="composer-text">Write a message</label>
+    <textarea id="composer-text" rows="2" placeholder="Write to them…"></textarea>
+    <div class="composer-row">
+      <button id="btn-attach-photo" class="btn btn-icon" type="button" title="Attach a photo" aria-label="Attach a photo">📷</button>
+      <button id="btn-attach-video" class="btn btn-icon" type="button" title="Attach a video" aria-label="Attach a video">🎬</button>
+      <button id="btn-record" class="btn btn-icon" type="button" title="Record a voice note" aria-label="Record a voice note">🎙️</button>
+      <button id="btn-send" class="btn btn-primary" type="button">Send</button>
+    </div>
+    <div id="recorder" class="recorder" hidden>
+      <span class="rec-dot" aria-hidden="true"></span>
+      <span id="rec-time">0:00</span>
+      <button id="btn-stop-rec" class="btn btn-danger" type="button">Stop</button>
+    </div>
+    <input type="file" id="file-photo" accept="image/*" hidden>
+    <input type="file" id="file-video" accept="video/*" hidden>
+  </section>
+</main>
+
+<!-- ============ SPACE DIALOG ============ -->
+<dialog id="space-dialog">
+  <form id="space-form" method="dialog">
+    <h2 id="space-dialog-title">New space</h2>
+    <label class="field">
+      <span>Their name *</span>
+      <input id="f-name" type="text" required maxlength="80" autocomplete="off" placeholder="e.g. Ammachi">
+    </label>
+    <label class="field">
+      <span>Photo</span>
+      <input id="f-photo" type="file" accept="image/*">
+    </label>
+    <div class="field-row">
+      <label class="field">
+        <span>Dates</span>
+        <input id="f-dates" type="text" maxlength="40" autocomplete="off" placeholder="e.g. 1940 – 2020">
+      </label>
+    </div>
+    <label class="field">
+      <span>One-line dedication</span>
+      <input id="f-dedication" type="text" maxlength="140" autocomplete="off" placeholder="e.g. Forever in our hearts">
+    </label>
+    <div class="dialog-actions">
+      <button type="button" id="btn-cancel-space" class="btn btn-ghost">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
