@@ -93,7 +93,35 @@ let pendingAttachments = []; // {kind:'photo'|'video'|'voice', dataUrl, mime}
 function showView(name) {
   $('view-spaces').hidden = name !== 'spaces';
   $('view-space').hidden = name !== 'space';
+  document.body.classList.toggle('in-space', name === 'space');
   window.scrollTo(0, 0);
+}
+
+/* ---------------- ambient starfield (dark space view) ---------------- */
+function initStarfield() {
+  const c = document.createElement('canvas');
+  c.id = 'starfield';
+  c.setAttribute('aria-hidden', 'true');
+  document.body.prepend(c);
+  const draw = () => {
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    const W = window.innerWidth, H = window.innerHeight;
+    c.width = Math.max(1, Math.round(W * DPR));
+    c.height = Math.max(1, Math.round(H * DPR));
+    const ctx = c.getContext('2d');
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < 170; i++) {
+      const r = Math.random() < 0.12 ? 1.9 : 1;
+      ctx.beginPath();
+      ctx.arc(Math.random() * W, Math.random() * H, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${(0.12 + Math.random() * 0.62).toFixed(2)})`;
+      ctx.fill();
+    }
+  };
+  draw();
+  let rt = null;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(draw, 200); });
 }
 
 /* ---------------- spaces list ---------------- */
@@ -292,7 +320,8 @@ async function sendMessage() {
 
 /* ---------------- release-to-stars send animation ----------------
  * Messages here are one-directional: they are not sent to anyone.
- * Visually, the message is released upward toward the stars. */
+ * The message rests, then launches upward as a streak of light and
+ * ignites one random star — your words join the sky. */
 function playReleaseAnimation(preview) {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     return Promise.resolve();
@@ -339,6 +368,7 @@ function playReleaseAnimation(preview) {
     fit();
     window.addEventListener('resize', fit);
 
+    // star field; one random star is the destination and stays fixed
     const stars = [];
     for (let i = 0; i < 90; i++) {
       stars.push({
@@ -350,15 +380,27 @@ function playReleaseAnimation(preview) {
         sp: 1 + Math.random() * 2,
       });
     }
+    const target = stars[(Math.random() * stars.length) | 0];
+    target.vy = 0;
+    target.r = Math.max(target.r, 1.5);
+    target.y = Math.min(target.y, 0.55); // destination in the upper sky
 
-    const DUR = 2600;
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    const DUR = 3200;
     const t0 = performance.now();
+    // timeline: 0–0.18 rest, 0.18–0.5 launch, 0.5–0.78 streak, 0.78–1 ignition
+    const LAUNCH0 = 0.18, LAUNCH1 = 0.5, HIT = 0.78;
+
     function frame(t) {
       const el = (t - t0) / 1000;
       const p = Math.min(1, (t - t0) / DUR);
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       ctx.clearRect(0, 0, W, H);
+
+      // star field (destination star drawn separately, fixed)
       for (const s of stars) {
+        if (s === target) continue;
         const y = ((((s.y - el * s.vy * 0.25) % 1) + 1) % 1);
         const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(s.ph + el * s.sp));
         ctx.beginPath();
@@ -366,11 +408,81 @@ function playReleaseAnimation(preview) {
         ctx.fillStyle = `rgba(255, 250, 240, ${(tw * 0.9).toFixed(3)})`;
         ctx.fill();
       }
-      // the message drifts upward and dissolves
-      msg.style.transform = `translate(-50%, calc(-50% + ${(-p * 140).toFixed(1)}px))`;
-      msg.style.opacity = String(Math.max(0, 1 - p * p * 1.2));
-      caption.style.opacity = String(p < 0.15 ? p / 0.15 : Math.max(0, 1 - (p - 0.6) / 0.4));
-      overlay.style.opacity = String(p < 0.1 ? p / 0.1 : p > 0.8 ? 1 - (p - 0.8) / 0.2 : 1);
+
+      const tx = target.x * W, ty = target.y * H;
+      const releaseY = H * 0.5 - H * 0.42; // where the message hands off to the streak
+
+      // --- the message: rests, then launches upward like it is being sent ---
+      if (p < LAUNCH0) {
+        msg.style.transform = 'translate(-50%, -50%)';
+        msg.style.opacity = '1';
+      } else if (p < LAUNCH1) {
+        const lp = (p - LAUNCH0) / (LAUNCH1 - LAUNCH0);
+        const e = lp * lp * lp; // accelerate
+        msg.style.transform = `translate(-50%, calc(-50% + ${(-e * H * 0.42).toFixed(1)}px)) scale(${(1 - e * 0.25).toFixed(3)})`;
+        msg.style.opacity = String(Math.max(0, 1 - e * 0.55));
+      } else {
+        msg.style.opacity = '0';
+      }
+
+      // --- streak of light: continues from the message up to the star ---
+      if (p >= LAUNCH1 && p < HIT) {
+        const sp = (p - LAUNCH1) / (HIT - LAUNCH1);
+        const e = sp * sp;
+        const sx = lerp(W * 0.5, tx, e);
+        const sy = lerp(releaseY, ty, e);
+        for (let k = 8; k >= 1; k--) { // comet trail
+          const ek = Math.max(0, sp - k * 0.035);
+          const ee = ek * ek;
+          ctx.beginPath();
+          ctx.arc(lerp(W * 0.5, tx, ee), lerp(releaseY, ty, ee), 3.2 * (1 - k / 10), 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 244, 220, ${(0.28 * (1 - k / 9)).toFixed(3)})`;
+          ctx.fill();
+        }
+        const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, 14);
+        grad.addColorStop(0, 'rgba(255, 252, 240, 1)');
+        grad.addColorStop(0.4, 'rgba(255, 240, 200, 0.85)');
+        grad.addColorStop(1, 'rgba(255, 240, 200, 0)');
+        ctx.beginPath();
+        ctx.arc(sx, sy, 14, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+
+      // --- ignition: the destination star lights up ---
+      const lit = p >= HIT;
+      const fp = lit ? Math.min(1, (p - HIT) / (1 - HIT)) : 0;
+      ctx.save();
+      if (lit) {
+        const pulse = 1 + 0.35 * Math.sin(fp * Math.PI * 5) * (1 - fp * 0.5);
+        ctx.shadowColor = 'rgba(255, 236, 180, 0.95)';
+        ctx.shadowBlur = 26;
+        ctx.beginPath();
+        ctx.arc(tx, ty, target.r * 2.6 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff8e6';
+        ctx.fill();
+        if (fp < 0.6) { // expanding ring at the moment of ignition
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.arc(tx, ty, 6 + fp * 130, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(255, 240, 200, ${(0.55 * (1 - fp / 0.6)).toFixed(3)})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      } else {
+        const tw = 0.6 + 0.4 * Math.sin(el * 3); // the chosen star glimmers, waiting
+        ctx.beginPath();
+        ctx.arc(tx, ty, target.r * 1.3, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 250, 240, ${(0.75 * tw).toFixed(3)})`;
+        ctx.fill();
+      }
+      ctx.restore();
+
+      caption.style.opacity = String(
+        p < HIT ? 0 : Math.min(1, (p - HIT) / 0.12) * Math.max(0, 1 - Math.max(0, (p - 0.9) / 0.1))
+      );
+      overlay.style.opacity = String(p < 0.06 ? p / 0.06 : p > 0.9 ? 1 - (p - 0.9) / 0.1 : 1);
+
       if (p < 1) {
         requestAnimationFrame(frame);
       } else {
@@ -486,6 +598,7 @@ function importAll(file) {
 
 /* ---------------- wire up ---------------- */
 document.addEventListener('DOMContentLoaded', () => {
+  initStarfield();
   renderSpaces();
 
   $('btn-new-space').addEventListener('click', () => openSpaceDialog(null));
