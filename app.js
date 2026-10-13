@@ -166,6 +166,7 @@ function showView(name) {
   $('view-spaces').hidden = name !== 'spaces';
   $('view-space').hidden = name !== 'space';
   document.body.classList.add('in-space'); // the whole app is dark themed
+  if (name === 'spaces') drawMapSky(); // in case it rendered while hidden
   window.scrollTo(0, 0);
 }
 
@@ -341,27 +342,65 @@ function initStarfield() {
 async function renderSpaces() {
   const spaces = await store.spaces.all();
   spaces.sort((a, b) => b.createdAt - a.createdAt);
-  const grid = $('spaces-grid');
-  grid.innerHTML = '';
-  $('spaces-empty').hidden = spaces.length > 0;
+  const map = $('star-map');
+  const layer = $('map-stars');
+  layer.innerHTML = '';
+  const has = spaces.length > 0;
+  $('spaces-empty').hidden = has;
+  map.hidden = !has;
 
   for (const s of spaces) {
-    const card = document.createElement('button');
-    card.className = 'space-card';
-    card.type = 'button';
-    if (s.hue) card.style.setProperty('--hue', s.hue);
-    const photo = s.photo
-      ? `<img class="space-card-photo" src="${s.photo}" alt="">`
-      : `<div class="space-card-photo placeholder" aria-hidden="true">✨</div>`;
-    card.innerHTML = `${photo}<div class="space-card-body">
-        <h2>${esc(s.name)}</h2>
-        ${s.dates ? `<p class="space-card-dates">${esc(s.dates)}</p>` : ''}
-        ${s.dedication ? `<p class="space-card-dedication">“${esc(s.dedication)}”</p>` : ''}
-      </div>`;
-    card.addEventListener('click', () => openSpace(s.id));
-    grid.appendChild(card);
+    const b = document.createElement('button');
+    b.className = 'map-star';
+    b.type = 'button';
+    b.setAttribute('aria-label', `Open star ${s.name}`);
+    const x = typeof s.starX === 'number' ? s.starX : 0.5;
+    const y = typeof s.starY === 'number' ? s.starY : 0.4;
+    b.style.left = (x * 100).toFixed(2) + '%';
+    b.style.top = (y * 100).toFixed(2) + '%';
+    b.style.setProperty('--hue', s.hue || '255, 220, 180');
+    b.innerHTML = `<span class="map-star-dot" style="animation-delay: ${(Math.random() * 3.2).toFixed(2)}s"></span>` +
+      `<span class="map-star-name">${esc(s.name)}</span>`;
+    b.addEventListener('click', () => openSpace(s.id));
+    layer.appendChild(b);
   }
+  if (has) drawMapSky();
 }
+
+/* faint static starfield behind the plotted stars (seeded: stable per size) */
+function drawMapSky() {
+  const map = $('star-map');
+  const canvas = $('map-canvas');
+  if (!map || !canvas || map.hidden) return;
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  const W = map.clientWidth, H = map.clientHeight;
+  if (!W || !H) return;
+  canvas.width = Math.max(1, Math.round(W * DPR));
+  canvas.height = Math.max(1, Math.round(H * DPR));
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  let a = 987654321;
+  const rnd = () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  for (let i = 0; i < 70; i++) {
+    ctx.globalAlpha = 0.2 + rnd() * 0.5;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(rnd() * W, rnd() * H, 0.5 + rnd() * 1.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+let mapSkyT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(mapSkyT);
+  mapSkyT = setTimeout(drawMapSky, 200);
+});
 
 async function openSpace(id, updateHash = true) {
   if (updateHash) {

@@ -5,8 +5,8 @@ const CACHE = 'starbound-v1';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=14',
-  './app.js?v=21',
+  './styles.css?v=15',
+  './app.js?v=22',
   './vendor/sweetalert2.min.js?v=1',
   './manifest.webmanifest',
   './icons/icon-192.png',

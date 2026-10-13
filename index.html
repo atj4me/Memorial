@@ -19,7 +19,7 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
 
@@ -47,7 +47,11 @@
     <p class="empty-title">No stars yet</p>
     <p class="empty-sub">Name a star — for someone you've lost, a chapter of your life,<br>or just yourself. It will shine in your sky, waiting for your words.</p>
   </div>
-  <div id="spaces-grid" class="spaces-grid"></div>
+  <div id="star-map" class="star-map" hidden>
+    <canvas id="map-canvas" class="map-canvas" aria-hidden="true"></canvas>
+    <div id="map-stars"></div>
+    <p class="map-hint">Tap a star to open it</p>
+  </div>
   <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New star</button>
 </main>
 
@@ -121,6 +125,6 @@
 </dialog>
 
 <script src="vendor/sweetalert2.min.js?v=1"></script>
-<script src="app.js?v=21"></script>
+<script src="app.js?v=22"></script>
 </body>
 </html>

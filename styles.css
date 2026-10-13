@@ -110,34 +110,7 @@ html.boot-spaces #view-space { display: none; }
 .empty-sub { margin: 0.3rem 0; }
 .center { text-align: center; }
 
-/* ---------- spaces grid ---------- */
-.spaces-grid {
-  display: grid; gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  margin-bottom: 1.4rem;
-}
-.space-card {
-  background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--radius); box-shadow: var(--shadow);
-  overflow: hidden; cursor: pointer; text-align: left;
-  font: inherit; color: inherit; padding: 0; display: block; width: 100%;
-}
-.space-card:active { transform: scale(0.98); }
-.space-card-photo {
-  width: 100%; height: 150px; object-fit: cover; display: block;
-  background: var(--accent-soft);
-}
-.space-card-photo.placeholder {
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2.4rem; color: var(--muted);
-  text-shadow: 0 0 18px rgba(var(--hue, 255, 220, 180), 0.85);
-}
-.space-card-body { padding: 0.85rem 1rem 1rem; }
-.space-card-body h2 { margin: 0 0 0.15rem; font-size: 1.12rem; }
-.space-card-dates { margin: 0; font-size: 0.82rem; color: var(--muted); }
-.space-card-dedication { margin: 0.35rem 0 0; font-size: 0.88rem; color: var(--muted); font-style: italic; }
 .btn-new-space { display: block; margin: 0 auto; }
-
 /* ---------- space detail ---------- */
 .btn-back { margin-bottom: 1rem; }
 .space-hero {
@@ -237,7 +210,6 @@ dialog h2 { margin: 0 0 1rem; font-size: 1.3rem; }
 
 @media (max-width: 480px) {
   .view { padding: 0.9rem; }
-  .spaces-grid { grid-template-columns: 1fr 1fr; }
   .space-hero-actions { margin-left: 0; width: 100%; }
 }
 
@@ -300,6 +272,58 @@ dialog h2 { margin: 0 0 1rem; font-size: 1.3rem; }
   color: #f5efe2 !important;
 }
 
+/* ---------- star chart (tap a star in your sky) ---------- */
+.star-map {
+  position: relative;
+  height: min(56vh, 460px);
+  min-height: 330px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+  background: radial-gradient(120% 100% at 50% 0%, #101736 0%, #0a0f24 55%, #060912 100%);
+  margin: 0.4rem 0 1.1rem;
+  touch-action: manipulation;
+}
+.map-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+}
+.map-star {
+  position: absolute;
+  width: 64px; height: 64px; /* generous touch target on mobile */
+  transform: translate(-50%, -50%);
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-star-dot {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, rgba(var(--hue, 255, 220, 180), 0.95) 45%, rgba(var(--hue, 255, 220, 180), 0) 72%);
+  box-shadow: 0 0 14px 4px rgba(var(--hue, 255, 220, 180), 0.5);
+  animation: map-twinkle 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.map-star:active .map-star-dot { transform: scale(1.35); }
+.map-star-name {
+  position: absolute; top: calc(50% + 17px); left: 50%;
+  transform: translateX(-50%);
+  max-width: 112px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #f5efe2; font-size: 0.78rem; letter-spacing: 0.02em;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+@keyframes map-twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.map-hint {
+  position: absolute; bottom: 0.7rem; left: 0; right: 0;
+  margin: 0; text-align: center;
+  color: var(--muted); font-size: 0.75rem; letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
 /* ---------- dark starry space view ---------- */
 #starfield {
   position: fixed; inset: 0; width: 100%; height: 100%;
@@ -319,7 +343,6 @@ body.in-space .privacy-note {
   color: #a9a294;
 }
 body.in-space .space-hero,
-body.in-space .space-card,
 body.in-space .msg,
 body.in-space .composer {
   background: rgba(255, 255, 255, 0.05);
@@ -400,12 +423,6 @@ body.in-space .btn-primary:hover {
   box-shadow: 0 6px 30px rgba(217, 70, 239, 0.55);
   background: linear-gradient(135deg, #9d6bf7, #e35df0);
 }
-body.in-space .space-card { transition: transform 0.15s, box-shadow 0.2s, border-color 0.2s; }
-body.in-space .space-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(196, 181, 253, 0.45);
-  box-shadow: 0 10px 34px rgba(139, 92, 246, 0.22);
-}
 body.in-space .composer textarea:focus {
   outline: none;
   border-color: rgba(196, 181, 253, 0.6);
@@ -446,5 +463,5 @@ body.in-space .field input[type="file"]::file-selector-button:hover {
 }
 @media (prefers-reduced-motion: reduce) {
   body.in-space .brand-mark { animation: none; }
-  body.in-space .btn, body.in-space .space-card { transition: none; }
+  body.in-space .btn { transition: none; }
 }
