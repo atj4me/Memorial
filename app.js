@@ -223,7 +223,7 @@ async function renderSpaces() {
     card.type = 'button';
     const photo = s.photo
       ? `<img class="space-card-photo" src="${s.photo}" alt="">`
-      : `<div class="space-card-photo placeholder" aria-hidden="true">🕯️</div>`;
+      : `<div class="space-card-photo placeholder" aria-hidden="true">✨</div>`;
     card.innerHTML = `${photo}<div class="space-card-body">
         <h2>${esc(s.name)}</h2>
         ${s.dates ? `<p class="space-card-dates">${esc(s.dates)}</p>` : ''}
