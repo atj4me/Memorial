@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#070b1a">
-<meta name="description" content="Starbound — a private space for the words you still need to say. Write to those you miss, or to yourself — everything stays on your device.">
+<meta name="description" content="Starbound — a private sky for the words you still need to say. Name a star for those you miss, or for yourself — everything stays on your device.">
 <title>Starbound — letters to the stars</title>
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 
@@ -27,19 +27,19 @@
   Private by design — everything you write or upload stays in this browser, on this device. Nothing is ever sent anywhere.
 </p>
 
-<!-- ============ SPACES LIST ============ -->
+<!-- ============ STARS LIST ============ -->
 <main id="view-spaces" class="view">
   <div id="spaces-empty" class="empty" hidden>
-    <p class="empty-title">No spaces yet</p>
-    <p class="empty-sub">Create a space — for someone you've lost, a chapter of your life,<br>or just yourself. A place to keep the words flowing.</p>
+    <p class="empty-title">No stars yet</p>
+    <p class="empty-sub">Name a star — for someone you've lost, a chapter of your life,<br>or just yourself. It will shine in your sky, waiting for your words.</p>
   </div>
   <div id="spaces-grid" class="spaces-grid"></div>
-  <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New space</button>
+  <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New star</button>
 </main>
 
-<!-- ============ SPACE DETAIL ============ -->
+<!-- ============ STAR DETAIL ============ -->
 <main id="view-space" class="view" hidden>
-  <button id="btn-back" class="btn btn-ghost btn-back" type="button">← All spaces</button>
+  <button id="btn-back" class="btn btn-ghost btn-back" type="button">← All stars</button>
 
   <section class="space-hero">
     <img id="space-photo" class="space-photo" alt="" hidden>
@@ -77,10 +77,10 @@
   </section>
 </main>
 
-<!-- ============ SPACE DIALOG ============ -->
+<!-- ============ STAR DIALOG ============ -->
 <dialog id="space-dialog">
   <form id="space-form" method="dialog">
-    <h2 id="space-dialog-title">New space</h2>
+    <h2 id="space-dialog-title">New star</h2>
     <label class="field">
       <span>Name *</span>
       <input id="f-name" type="text" required maxlength="80" autocomplete="off" placeholder="e.g. Ammachi, or “Morning pages”">
@@ -96,7 +96,7 @@
       </label>
     </div>
     <label class="field">
-      <span>About this space</span>
+      <span>About this star</span>
       <input id="f-dedication" type="text" maxlength="140" autocomplete="off" placeholder="e.g. Letters I never sent">
     </label>
     <div class="dialog-actions">
@@ -106,6 +106,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

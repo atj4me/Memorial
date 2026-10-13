@@ -89,6 +89,47 @@ const store = {
 /* ---------------- state & navigation ---------------- */
 let currentSpaceId = null;
 let pendingAttachments = []; // {kind:'photo'|'video'|'voice', dataUrl, mime}
+let sky = null; // starfield API from initStarfield()
+
+/* ---------------- your stars ----------------
+ * Each space is a star pinned to a fixed point in your sky (starX/starY
+ * are fractions of the viewport; hue is an "r, g, b" triplet string).
+ * Messages released inside a space fly to that star and make it flare. */
+const STAR_HUES = ['190, 220, 255', '255, 220, 180', '255, 180, 220', '190, 255, 220', '225, 195, 255'];
+const pickHue = () => STAR_HUES[(Math.random() * STAR_HUES.length) | 0];
+
+function pickStarPosition(existing) {
+  let best = null, bestD = -1;
+  for (let i = 0; i < 24; i++) {
+    const c = { starX: 0.1 + Math.random() * 0.8, starY: 0.1 + Math.random() * 0.62 };
+    let d = Infinity;
+    for (const s of existing) {
+      if (typeof s.starX !== 'number' || typeof s.starY !== 'number') continue;
+      d = Math.min(d, Math.hypot(s.starX - c.starX, s.starY - c.starY));
+    }
+    if (d > bestD) { bestD = d; best = c; }
+  }
+  return best || { starX: 0.5, starY: 0.3 };
+}
+
+async function ensureStarPositions() {
+  const spaces = await store.spaces.all();
+  for (const s of spaces) {
+    let changed = false;
+    if (typeof s.starX !== 'number' || typeof s.starY !== 'number') {
+      Object.assign(s, pickStarPosition(spaces));
+      changed = true;
+    }
+    if (typeof s.hue !== 'string') { s.hue = pickHue(); changed = true; }
+    if (changed) await store.spaces.put(s);
+  }
+}
+
+async function syncSky() {
+  if (!sky) return;
+  const spaces = await store.spaces.all();
+  sky.setUserStars(spaces, currentSpaceId);
+}
 
 function showView(name) {
   $('view-spaces').hidden = name !== 'spaces';
@@ -107,6 +148,9 @@ function initStarfield() {
   const DPR = Math.min(2, window.devicePixelRatio || 1);
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let W = 0, H = 0, stars = [];
+  let userStars = []; // [{id, x, y, hue, tw}] — the user's own pinned stars
+  let activeStarId = null;
+  const boosts = {}; // id -> timestamp until which the star shines extra bright
 
   const seed = () => {
     stars = [];
@@ -165,9 +209,46 @@ function initStarfield() {
         ctx.fill();
       }
     }
+
+    // ---- the user's own stars: pinned, bright, gently pulsing ----
+    const nowMs = performance.now();
+    for (const u of userStars) {
+      const px = u.x * W, py = u.y * H;
+      const isActive = u.id === activeStarId;
+      const boost = Math.max(0, Math.min(1, ((boosts[u.id] || 0) - nowMs) / 9000)); // extra brilliance fading over 9s
+      const pulse = 0.82 + 0.18 * Math.sin(el * 1.7 + u.tw);
+      const R = Math.max(1.2, (isActive ? 3.2 : 2.5) * (1 + boost * 0.7) * pulse);
+      const haloR = R * (isActive ? 10 : 8);
+      const hg = ctx.createRadialGradient(px, py, 0, px, py, haloR);
+      hg.addColorStop(0, `rgba(${u.hue}, ${(0.42 * pulse + boost * 0.35).toFixed(3)})`);
+      hg.addColorStop(1, `rgba(${u.hue}, 0)`);
+      ctx.beginPath();
+      ctx.arc(px, py, haloR, 0, Math.PI * 2);
+      ctx.fillStyle = hg;
+      ctx.fill();
+      ctx.save();
+      ctx.shadowColor = `rgba(${u.hue}, 0.95)`;
+      ctx.shadowBlur = 12 + boost * 16;
+      ctx.beginPath();
+      ctx.arc(px, py, R, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, 0.92 * pulse + boost * 0.4).toFixed(3)})`;
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
-  if (reduced) { drawStars(1.3); return; } // single static frame
+  const api = {
+    setUserStars(list, activeId) {
+      userStars = (list || [])
+        .filter((s) => typeof s.starX === 'number' && typeof s.starY === 'number')
+        .map((s) => ({ id: s.id, x: s.starX, y: s.starY, hue: s.hue || '255, 220, 180', tw: Math.random() * Math.PI * 2 }));
+      activeStarId = activeId || null;
+      if (reduced) drawStars(1.3);
+    },
+    boost(id) { boosts[id] = performance.now() + 9000; },
+  };
+
+  if (reduced) { drawStars(1.3); return api; } // single static frame
 
   const t0 = performance.now();
   function frame(now) {
@@ -210,6 +291,7 @@ function initStarfield() {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  return api;
 }
 
 /* ---------------- spaces list ---------------- */
@@ -224,6 +306,7 @@ async function renderSpaces() {
     const card = document.createElement('button');
     card.className = 'space-card';
     card.type = 'button';
+    if (s.hue) card.style.setProperty('--hue', s.hue);
     const photo = s.photo
       ? `<img class="space-card-photo" src="${s.photo}" alt="">`
       : `<div class="space-card-photo placeholder" aria-hidden="true">✨</div>`;
@@ -238,16 +321,17 @@ async function renderSpaces() {
 }
 
 async function openSpace(id, updateHash = true) {
+  if (updateHash) {
+    // Set the hash first so even an immediate reload lands back here.
+    const h = '#/space/' + encodeURIComponent(id);
+    if (location.hash !== h) location.hash = h;
+  }
   const s = await store.spaces.get(id);
   if (!s) { goHome(); return; }
   currentSpaceId = id;
   pendingAttachments = [];
   await renderSpace();
   showView('space');
-  if (updateHash) {
-    const h = '#/space/' + encodeURIComponent(id);
-    if (location.hash !== h) location.hash = h;
-  }
 }
 
 /* Remember the open space in the URL so a refresh (or back/forward) restores it. */
@@ -255,12 +339,13 @@ function spaceIdFromHash() {
   const m = location.hash.match(/^#\/space\/([^/]+)$/);
   return m ? decodeURIComponent(m[1]) : null;
 }
-function goHome() {
+async function goHome() {
   currentSpaceId = null;
   if (location.hash.startsWith('#/space/')) {
     history.replaceState(null, '', location.pathname + location.search);
   }
-  renderSpaces();
+  await renderSpaces();
+  await syncSky();
   showView('spaces');
 }
 window.addEventListener('hashchange', () => {
@@ -348,6 +433,7 @@ async function renderSpace() {
   }
   tl.scrollTop = tl.scrollHeight;
   renderPending();
+  await syncSky(); // highlight this star in the sky
 }
 
 /* ---------------- space dialog (create / edit) ---------------- */
@@ -356,7 +442,7 @@ let dialogPhotoDataUrl = null;
 
 function openSpaceDialog(space) {
   editingSpaceId = space ? space.id : null;
-  $('space-dialog-title').textContent = space ? 'Edit space' : 'New space';
+  $('space-dialog-title').textContent = space ? 'Edit star' : 'New star';
   $('f-name').value = space ? space.name : '';
   $('f-dates').value = space ? (space.dates || '') : '';
   $('f-dedication').value = space ? (space.dedication || '') : '';
@@ -427,18 +513,30 @@ async function sendMessage() {
   }
   $('composer-text').value = '';
   pendingAttachments = [];
-  await playReleaseAnimation(preview);
+  const s = await store.spaces.get(currentSpaceId);
+  const dest = {
+    x: s && typeof s.starX === 'number' ? s.starX : 0.5,
+    y: s && typeof s.starY === 'number' ? s.starY : 0.3,
+    hue: (s && s.hue) || '255, 220, 180',
+    name: (s && s.name) || 'the stars',
+  };
+  await playReleaseAnimation(preview, dest);
+  if (sky && s) sky.boost(s.id); // the star glows brighter for a while
   await renderSpace();
+  await syncSky();
 }
 
-/* ---------------- release-to-stars send animation ----------------
+/* ---------------- release-to-your-star send animation ----------------
  * Messages here are one-directional: they are not sent to anyone.
- * The message rests, then launches upward as a streak of light and
- * ignites one random star — your words join the sky. */
-function playReleaseAnimation(preview) {
+ * The message rests, then launches as a streak of light toward your
+ * star — the one this space is named for — and makes it flare. */
+function playReleaseAnimation(preview, dest) {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     return Promise.resolve();
   }
+  dest = dest || { x: 0.5, y: 0.3, hue: '255, 220, 180', name: 'the stars' };
+  const hue = dest.hue || '255, 220, 180';
+  const starName = String(dest.name || 'the stars');
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'stars-overlay';
@@ -463,7 +561,8 @@ function playReleaseAnimation(preview) {
 
     const caption = document.createElement('div');
     caption.className = 'stars-caption';
-    caption.textContent = 'Released to the stars';
+    const shortName = starName.length > 28 ? starName.slice(0, 28) + '…' : starName;
+    caption.textContent = 'Released to ' + shortName;
 
     overlay.appendChild(canvas);
     overlay.appendChild(msg);
@@ -481,7 +580,7 @@ function playReleaseAnimation(preview) {
     fit();
     window.addEventListener('resize', fit);
 
-    // star field; one random star is the destination and stays fixed
+    // star field; your star is the destination and stays fixed
     const stars = [];
     for (let i = 0; i < 90; i++) {
       stars.push({
@@ -493,10 +592,7 @@ function playReleaseAnimation(preview) {
         sp: 1 + Math.random() * 2,
       });
     }
-    const target = stars[(Math.random() * stars.length) | 0];
-    target.vy = 0;
-    target.r = Math.max(target.r, 1.5);
-    target.y = Math.min(target.y, 0.55); // destination in the upper sky
+    const target = { x: dest.x, y: dest.y, r: 2.4 };
 
     const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -511,9 +607,8 @@ function playReleaseAnimation(preview) {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       ctx.clearRect(0, 0, W, H);
 
-      // star field (destination star drawn separately, fixed)
+      // star field (your star is drawn separately, fixed at its sky position)
       for (const s of stars) {
-        if (s === target) continue;
         const y = ((((s.y - el * s.vy * 0.25) % 1) + 1) % 1);
         const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(s.ph + el * s.sp));
         ctx.beginPath();
@@ -562,32 +657,41 @@ function playReleaseAnimation(preview) {
         ctx.fill();
       }
 
-      // --- ignition: the destination star lights up ---
+      // --- ignition: your star flares in its own colour ---
       const lit = p >= HIT;
       const fp = lit ? Math.min(1, (p - HIT) / (1 - HIT)) : 0;
       ctx.save();
       if (lit) {
         const pulse = 1 + 0.35 * Math.sin(fp * Math.PI * 5) * (1 - fp * 0.5);
-        ctx.shadowColor = 'rgba(255, 236, 180, 0.95)';
-        ctx.shadowBlur = 26;
+        ctx.shadowColor = `rgba(${hue}, 0.95)`;
+        ctx.shadowBlur = 30;
         ctx.beginPath();
-        ctx.arc(tx, ty, target.r * 2.6 * pulse, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff8e6';
+        ctx.arc(tx, ty, target.r * 2.8 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = '#fffdf4';
         ctx.fill();
-        if (fp < 0.6) { // expanding ring at the moment of ignition
+        if (fp < 0.6) { // expanding rings at the moment of ignition
           ctx.shadowBlur = 0;
           ctx.beginPath();
-          ctx.arc(tx, ty, 6 + fp * 130, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(255, 240, 200, ${(0.55 * (1 - fp / 0.6)).toFixed(3)})`;
-          ctx.lineWidth = 2;
+          ctx.arc(tx, ty, 6 + fp * 150, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${hue}, ${(0.6 * (1 - fp / 0.6)).toFixed(3)})`;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(tx, ty, 6 + fp * 90, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(255, 255, 255, ${(0.5 * (1 - fp / 0.6)).toFixed(3)})`;
+          ctx.lineWidth = 1.5;
           ctx.stroke();
         }
       } else {
-        const tw = 0.6 + 0.4 * Math.sin(el * 3); // the chosen star glimmers, waiting
+        const tw = 0.6 + 0.4 * Math.sin(el * 3); // your star glimmers, waiting
+        ctx.save();
+        ctx.shadowColor = `rgba(${hue}, 0.9)`;
+        ctx.shadowBlur = 14;
         ctx.beginPath();
-        ctx.arc(tx, ty, target.r * 1.3, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 250, 240, ${(0.75 * tw).toFixed(3)})`;
+        ctx.arc(tx, ty, target.r * 1.4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${(0.85 * tw).toFixed(3)})`;
         ctx.fill();
+        ctx.restore();
       }
       ctx.restore();
 
@@ -694,7 +798,7 @@ function importAll(file) {
       alert('That file does not look like a Starbound backup.');
       return;
     }
-    if (!confirm(`Import this backup? It will REPLACE everything currently here (${data.spaces.length} spaces, ${data.messages.length} messages).`)) return;
+    if (!confirm(`Import this backup? It will REPLACE everything currently here (${data.spaces.length} stars, ${data.messages.length} messages).`)) return;
     await tx('spaces', 'readwrite', (os) => reqAsPromise(os.clear()));
     await store.messages.clear();
     for (const s of data.spaces) {
@@ -704,7 +808,8 @@ function importAll(file) {
       if (m && m.id && m.spaceId) await store.messages.put({ id: m.id, spaceId: m.spaceId, type: m.type || 'text', text: m.text || '', dataUrl: m.dataUrl || '', mime: m.mime || '', createdAt: m.createdAt || Date.now() });
     }
     currentSpaceId = null;
-    goHome();
+    await ensureStarPositions();
+    await goHome();
     alert('Backup imported.');
   };
   reader.readAsText(file);
@@ -712,12 +817,16 @@ function importAll(file) {
 
 /* ---------------- wire up ---------------- */
 document.addEventListener('DOMContentLoaded', () => {
-  initStarfield();
+  sky = initStarfield();
   document.body.classList.add('in-space'); // dark theme for the whole app, applied immediately
-  renderSpaces();
-  const deepId = spaceIdFromHash();
-  if (deepId) openSpace(deepId, false);
-  else showView('spaces');
+  (async () => {
+    await ensureStarPositions(); // older saves get a pinned star
+    await renderSpaces();
+    await syncSky();
+    const deepId = spaceIdFromHash();
+    if (deepId) openSpace(deepId, false);
+    else showView('spaces');
+  })();
 
   $('btn-new-space').addEventListener('click', () => openSpaceDialog(null));
   $('btn-cancel-space').addEventListener('click', closeSpaceDialog);
@@ -748,6 +857,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dates: $('f-dates').value.trim(),
         dedication: $('f-dedication').value.trim(),
         photo: dialogPhotoDataUrl,
+        ...pickStarPosition(await store.spaces.all()),
+        hue: pickHue(),
         createdAt: Date.now(),
       };
       await store.spaces.put(s);
@@ -769,11 +880,11 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-delete-space').addEventListener('click', async () => {
     const s = await store.spaces.get(currentSpaceId);
     if (!s) return;
-    if (!confirm(`Delete the space “${s.name}” and all its messages? This cannot be undone.`)) return;
+    if (!confirm(`Delete the star “${s.name}” and all its messages? This cannot be undone.`)) return;
     const msgs = await store.messages.bySpace(s.id);
     for (const m of msgs) await store.messages.del(m.id);
     await store.spaces.del(s.id);
-    goHome();
+    await goHome();
   });
 
   $('btn-send').addEventListener('click', sendMessage);
