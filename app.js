@@ -575,7 +575,7 @@ function playReleaseAnimation(preview, dest) {
     const caption = document.createElement('div');
     caption.className = 'stars-caption';
     const shortName = starName.length > 28 ? starName.slice(0, 28) + '…' : starName;
-    caption.textContent = 'Released to ' + shortName;
+    caption.textContent = 'Sent to ' + shortName;
 
     overlay.appendChild(canvas);
     overlay.appendChild(msg);
@@ -1128,12 +1128,12 @@ function importAll(file) {
   reader.onload = async () => {
     let data;
     try { data = JSON.parse(reader.result); }
-    catch (e) { alert('That file is not valid JSON.'); return; }
+    catch (e) { alert("Couldn't read that file. Is it a Starbound backup?"); return; }
     if (!data || !Array.isArray(data.spaces) || !Array.isArray(data.messages)) {
       alert('That file does not look like a Starbound backup.');
       return;
     }
-    if (!confirm(`Import this backup? It will REPLACE everything currently here (${data.spaces.length} stars, ${data.messages.length} messages).`)) return;
+    if (!confirm(`Restore this backup? It will replace everything here right now (${data.spaces.length} stars, ${data.messages.length} messages).`)) return;
     await tx('spaces', 'readwrite', (os) => reqAsPromise(os.clear()));
     await store.messages.clear();
     for (const s of data.spaces) {
@@ -1145,7 +1145,7 @@ function importAll(file) {
     currentSpaceId = null;
     await ensureStarPositions();
     await goHome();
-    alert('Backup imported.');
+    alert('Backup restored.');
   };
   reader.readAsText(file);
 }
