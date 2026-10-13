@@ -152,21 +152,33 @@ function initStarfield() {
   let activeStarId = null;
   const boosts = {}; // id -> timestamp until which the star shines extra bright
 
+  // Deterministic sky: the same background stars on every load, so a refresh
+  // never reshuffles the heavens. (Your own stars are pinned separately.)
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
   const seed = () => {
+    const rnd = mulberry32(20261013);
     stars = [];
     const n = Math.round(Math.min(220, Math.max(120, (W * H) / 12000)));
     for (let i = 0; i < n; i++) {
-      const hero = Math.random() < 0.1;
-      const blinker = !hero && Math.random() < 0.22; // stars that visibly blink
-      const tint = Math.random();
+      const hero = rnd() < 0.1;
+      const blinker = !hero && rnd() < 0.22; // stars that visibly blink
+      const tint = rnd();
       stars.push({
-        x: Math.random(), // fractional: stable across resizes (URL bar show/hide)
-        y: Math.random(),
-        r: hero ? 1.6 + Math.random() * 1.2 : blinker ? 1 + Math.random() * 1.2 : 0.6 + Math.random() * 1.1,
-        base: blinker ? 0.5 : 0.25 + Math.random() * 0.5,
-        amp: blinker ? 0.5 : 0.2 + Math.random() * 0.45,
-        ph: Math.random() * Math.PI * 2,
-        sp: blinker ? 1.5 + Math.random() * 2.5 : 0.6 + Math.random() * 2.2,
+        x: rnd(), // fractional: stable across resizes (URL bar show/hide)
+        y: rnd(),
+        r: hero ? 1.6 + rnd() * 1.2 : blinker ? 1 + rnd() * 1.2 : 0.6 + rnd() * 1.1,
+        base: blinker ? 0.5 : 0.25 + rnd() * 0.5,
+        amp: blinker ? 0.5 : 0.2 + rnd() * 0.45,
+        ph: rnd() * Math.PI * 2,
+        sp: blinker ? 1.5 + rnd() * 2.5 : 0.6 + rnd() * 2.2,
         hero,
         blinker,
         hue: tint < 0.15 ? '190, 220, 255' : tint < 0.27 ? '255, 220, 180' : '255, 255, 255',
@@ -819,6 +831,10 @@ function importAll(file) {
 document.addEventListener('DOMContentLoaded', () => {
   sky = initStarfield();
   document.body.classList.add('in-space'); // dark theme for the whole app, applied immediately
+  // Hide the wrong view synchronously: a refresh into a star must never flash the star list first.
+  const bootHashId = spaceIdFromHash();
+  $('view-spaces').hidden = !!bootHashId;
+  $('view-space').hidden = !bootHashId;
   (async () => {
     await ensureStarPositions(); // older saves get a pinned star
     await renderSpaces();
