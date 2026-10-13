@@ -358,6 +358,20 @@ body.in-space .msg::before {
   opacity: 0.85;
 }
 body.in-space .stars-caption { letter-spacing: 0.28em; }
+body.in-space dialog {
+  background: #0d1330;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #ece7d9;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 44px rgba(139, 92, 246, 0.14);
+}
+body.in-space dialog::backdrop { background: rgba(4, 6, 16, 0.7); }
+body.in-space .field > span { color: #a9a294; }
+body.in-space .field input[type="text"] {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #ece7d9;
+}
+body.in-space .field input[type="file"] { color: #a9a294; }
 @media (prefers-reduced-motion: reduce) {
   body.in-space .brand-mark { animation: none; }
   body.in-space .btn, body.in-space .space-card { transition: none; }
