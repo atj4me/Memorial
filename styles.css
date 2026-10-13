@@ -308,9 +308,8 @@ body.in-space {
   background-attachment: fixed;
 }
 body.in-space .brand-name {
-  background: linear-gradient(92deg, #c4b5fd, #f0abfc 55%, #fcd34d);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
+  color: #f6ecff;
+  text-shadow: 0 0 16px rgba(216, 180, 254, 0.55), 0 0 44px rgba(217, 70, 239, 0.28);
 }
 body.in-space .brand-mark {
   display: inline-block;
@@ -319,9 +318,8 @@ body.in-space .brand-mark {
 }
 @keyframes floaty { 50% { transform: translateY(-4px) rotate(8deg); } }
 body.in-space .empty-title {
-  background: linear-gradient(92deg, #c4b5fd, #f0abfc);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
+  color: #f6ecff;
+  text-shadow: 0 0 24px rgba(216, 180, 254, 0.35);
 }
 body.in-space .btn {
   transition: transform 0.12s, box-shadow 0.2s, background 0.15s, border-color 0.15s;
