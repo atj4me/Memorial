@@ -11,7 +11,7 @@
  * idempotent and commutative, so sync converges no matter the order.
  */
 
-const DRIVE_CLIENT_ID = ''; // <-- set at build time; the Drive button stays hidden until set
+const DRIVE_CLIENT_ID = '744098321091-frlrvl3ghti9gh1e0vs6dq1gs5ddlu6v.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const DRIVE_FILE = 'starbound-sync.json';
 const DRIVE_LS_LINKED = 'starbound-drive-linked';

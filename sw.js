@@ -7,7 +7,7 @@ const ASSETS = [
   './index.html',
   './styles.css?v=17',
   './app.js?v=28',
-  './drive-sync.js?v=1',
+  './drive-sync.js?v=2',
   './vendor/sweetalert2.min.js?v=1',
   './manifest.webmanifest',
   './icons/icon-192.png',

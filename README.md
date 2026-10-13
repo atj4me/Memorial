@@ -34,6 +34,10 @@ device:
 - **Backup is your responsibility:** use the Backup button to download your
   full dataset as JSON (media embedded as data URLs), and Restore to bring
   it back. Keep the backup file somewhere safe.
+- **Google Drive sync (optional):** tap the cloud button in the top bar to
+  sign in with Google and keep your sky in sync across devices. Your data
+  is stored in a hidden folder only Starbound can see, inside your own
+  Google Drive — no one else can access it. Nothing is shared with anyone.
 
 If you want someone else to use the app, point them at the live URL — they
 get their own private, local-only copy. Nothing is shared between visitors.
