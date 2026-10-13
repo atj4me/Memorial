@@ -93,7 +93,7 @@ let pendingAttachments = []; // {kind:'photo'|'video'|'voice', dataUrl, mime}
 function showView(name) {
   $('view-spaces').hidden = name !== 'spaces';
   $('view-space').hidden = name !== 'space';
-  document.body.classList.toggle('in-space', name === 'space');
+  document.body.classList.add('in-space'); // the whole app is dark themed
   window.scrollTo(0, 0);
 }
 
