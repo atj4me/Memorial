@@ -97,31 +97,116 @@ function showView(name) {
   window.scrollTo(0, 0);
 }
 
-/* ---------------- ambient starfield (dark space view) ---------------- */
+/* ---------------- ambient starfield (living night sky) ---------------- */
 function initStarfield() {
   const c = document.createElement('canvas');
   c.id = 'starfield';
   c.setAttribute('aria-hidden', 'true');
   document.body.prepend(c);
-  const draw = () => {
-    const DPR = Math.min(2, window.devicePixelRatio || 1);
-    const W = window.innerWidth, H = window.innerHeight;
-    c.width = Math.max(1, Math.round(W * DPR));
-    c.height = Math.max(1, Math.round(H * DPR));
-    const ctx = c.getContext('2d');
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    for (let i = 0; i < 170; i++) {
-      const r = Math.random() < 0.12 ? 1.9 : 1;
-      ctx.beginPath();
-      ctx.arc(Math.random() * W, Math.random() * H, r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 255, 255, ${(0.12 + Math.random() * 0.62).toFixed(2)})`;
-      ctx.fill();
+  const ctx = c.getContext('2d');
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W = 0, H = 0, stars = [];
+
+  const seed = () => {
+    stars = [];
+    const n = Math.round(Math.min(220, Math.max(120, (W * H) / 12000)));
+    for (let i = 0; i < n; i++) {
+      const hero = Math.random() < 0.1;
+      const tint = Math.random();
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: hero ? 1.6 + Math.random() * 1.2 : 0.6 + Math.random() * 1.1,
+        base: 0.25 + Math.random() * 0.5,
+        amp: 0.2 + Math.random() * 0.45,
+        ph: Math.random() * Math.PI * 2,
+        sp: 0.6 + Math.random() * 2.2,
+        hero,
+        hue: tint < 0.15 ? '190, 220, 255' : tint < 0.27 ? '255, 220, 180' : '255, 255, 255',
+      });
     }
   };
-  draw();
+  const fit = () => {
+    W = window.innerWidth; H = window.innerHeight;
+    c.width = Math.max(1, Math.round(W * DPR));
+    c.height = Math.max(1, Math.round(H * DPR));
+    seed();
+  };
+  fit();
   let rt = null;
-  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(draw, 200); });
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(fit, 250); });
+
+  let meteor = null;
+  let nextMeteor = performance.now() + 7000 + Math.random() * 8000;
+
+  function drawStars(el) {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    for (const s of stars) {
+      const tw = s.base + s.amp * (0.5 + 0.5 * Math.sin(s.ph + el * s.sp));
+      const a = Math.max(0.05, Math.min(1, tw)).toFixed(3);
+      if (s.hero) {
+        ctx.save();
+        ctx.shadowColor = `rgba(${s.hue}, 0.9)`;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${s.hue}, ${a})`;
+        ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${s.hue}, ${a})`;
+        ctx.fill();
+      }
+    }
+  }
+
+  if (reduced) { drawStars(1.3); return; } // single static frame
+
+  const t0 = performance.now();
+  function frame(now) {
+    const el = (now - t0) / 1000;
+    drawStars(el);
+    // occasional shooting star
+    if (!meteor && now >= nextMeteor) {
+      meteor = {
+        x: W * (0.15 + Math.random() * 0.7), y: -20,
+        vx: (Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 120),
+        vy: 220 + Math.random() * 120, life: 0,
+      };
+    }
+    if (meteor) {
+      const dt = 1 / 60;
+      meteor.life += dt;
+      meteor.x += meteor.vx * dt;
+      meteor.y += meteor.vy * dt;
+      const fade = Math.max(0, 1 - meteor.life / 1.1);
+      if (fade <= 0 || meteor.y > H + 40 || meteor.x < -60 || meteor.x > W + 60) {
+        meteor = null;
+        nextMeteor = now + 9000 + Math.random() * 9000;
+      } else {
+        const tx = meteor.x - meteor.vx * 0.35, ty = meteor.y - meteor.vy * 0.35;
+        const grad = ctx.createLinearGradient(meteor.x, meteor.y, tx, ty);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${(0.9 * fade).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(meteor.x, meteor.y);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(meteor.x, meteor.y, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${(0.9 * fade).toFixed(3)})`;
+        ctx.fill();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 }
 
 /* ---------------- spaces list ---------------- */
