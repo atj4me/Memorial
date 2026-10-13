@@ -50,7 +50,8 @@ h1, h2, .serif {
 /* cinematic mode: during birth/supernova animations the foreground UI gets
    out of the way so the event owns the whole sky */
 body.cinematic .topbar,
-body.cinematic .view {
+body.cinematic .view,
+body.cinematic .privacy-note {
   opacity: 0;
   pointer-events: none;
 }
@@ -66,6 +67,7 @@ body.cinematic .view {
   border-bottom: 1px solid var(--line);
   text-align: center;
   position: relative;
+  transition: opacity 0.5s ease;
 }
 .privacy-note[hidden] { display: none; }
 .privacy-dismiss {
