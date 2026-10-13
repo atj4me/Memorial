@@ -332,7 +332,7 @@ async function showDriveDialog() {
     const r = await SwalLib.fire({
       ...dark,
       title: 'Sync with Google Drive',
-      html: '<p class="drive-blurb">Keep your sky in sync across devices. Everything is stored in a hidden folder only Starbound can see, inside <strong>your own</strong> Google Drive — no one else can access it.</p>',
+      html: '<p class="drive-blurb">Keep your sky in sync across devices. Everything is stored in a hidden folder only Starbound can see, inside <strong>your own</strong> Google Drive — no one else can access it.</p><p class="drive-blurb"><a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a></p>',
       confirmButtonText: 'Sign in with Google',
       showCancelButton: true,
       cancelButtonText: 'Not now',
