@@ -338,9 +338,9 @@ async function openSpace(id, updateHash = true) {
     const h = '#/space/' + encodeURIComponent(id);
     if (location.hash !== h) location.hash = h;
   }
+  currentSpaceId = id; // set before the awaits so the hashchange handler below skips the duplicate open
   const s = await store.spaces.get(id);
   if (!s) { goHome(); return; }
-  currentSpaceId = id;
   pendingAttachments = [];
   await renderSpace();
   showView('space');
@@ -362,8 +362,9 @@ async function goHome() {
 }
 window.addEventListener('hashchange', () => {
   const id = spaceIdFromHash();
-  if (id) openSpace(id, false);
-  else goHome();
+  if (id) {
+    if (id !== currentSpaceId) openSpace(id, false); // skip the duplicate from our own hash set
+  } else goHome();
 });
 
 /* ---------------- space detail ---------------- */
