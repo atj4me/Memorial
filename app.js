@@ -113,16 +113,18 @@ function initStarfield() {
     const n = Math.round(Math.min(220, Math.max(120, (W * H) / 12000)));
     for (let i = 0; i < n; i++) {
       const hero = Math.random() < 0.1;
+      const blinker = !hero && Math.random() < 0.22; // stars that visibly blink
       const tint = Math.random();
       stars.push({
         x: Math.random() * W,
         y: Math.random() * H,
-        r: hero ? 1.6 + Math.random() * 1.2 : 0.6 + Math.random() * 1.1,
-        base: 0.25 + Math.random() * 0.5,
-        amp: 0.2 + Math.random() * 0.45,
+        r: hero ? 1.6 + Math.random() * 1.2 : blinker ? 1 + Math.random() * 1.2 : 0.6 + Math.random() * 1.1,
+        base: blinker ? 0.5 : 0.25 + Math.random() * 0.5,
+        amp: blinker ? 0.5 : 0.2 + Math.random() * 0.45,
         ph: Math.random() * Math.PI * 2,
-        sp: 0.6 + Math.random() * 2.2,
+        sp: blinker ? 1.5 + Math.random() * 2.5 : 0.6 + Math.random() * 2.2,
         hero,
+        blinker,
         hue: tint < 0.15 ? '190, 220, 255' : tint < 0.27 ? '255, 220, 180' : '255, 255, 255',
       });
     }
