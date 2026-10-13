@@ -1194,6 +1194,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const bootHashId = spaceIdFromHash();
   $('view-spaces').hidden = !!bootHashId;
   $('view-space').hidden = !bootHashId;
+  // privacy note: dismissible, stays dismissed
+  try {
+    if (localStorage.getItem('starbound-privacy-dismissed') === '1') {
+      $('privacy-note').hidden = true;
+    }
+  } catch (e) {}
+  $('privacy-dismiss').addEventListener('click', () => {
+    $('privacy-note').hidden = true;
+    try { localStorage.setItem('starbound-privacy-dismissed', '1'); } catch (e) {}
+  });
   (async () => {
     await ensureStarPositions(); // older saves get a pinned star
     await renderSpaces();

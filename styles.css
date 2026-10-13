@@ -60,12 +60,22 @@ body.cinematic .view {
 .top-actions { display: flex; gap: 0.5rem; }
 
 .privacy-note {
-  margin: 0; padding: 0.55rem 1.1rem;
+  margin: 0; padding: 0.55rem 2.4rem 0.55rem 1.1rem;
   font-size: 0.8rem; color: var(--muted);
   background: var(--accent-soft);
   border-bottom: 1px solid var(--line);
   text-align: center;
+  position: relative;
 }
+.privacy-note[hidden] { display: none; }
+.privacy-dismiss {
+  position: absolute; right: 0.5rem; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 0.85rem; line-height: 1;
+  padding: 0.4rem;
+}
+.privacy-dismiss:hover { color: var(--ink); }
 
 /* ---------- buttons ---------- */
 .btn {

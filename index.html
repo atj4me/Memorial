@@ -16,7 +16,7 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="styles.css?v=12">
+<link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
 
@@ -32,9 +32,10 @@
   </div>
 </header>
 
-<p class="privacy-note">
+<p class="privacy-note" id="privacy-note">
   <span aria-hidden="true">🔒</span>
   Private by design — everything you write or upload stays in this browser, on this device. Nothing is ever sent anywhere.
+  <button type="button" id="privacy-dismiss" class="privacy-dismiss" aria-label="Dismiss">✕</button>
 </p>
 
 <!-- ============ STARS LIST ============ -->
@@ -117,6 +118,6 @@
 </dialog>
 
 <script src="vendor/sweetalert2.min.js?v=1"></script>
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
