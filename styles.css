@@ -299,14 +299,17 @@ body.in-space .space-photo { border-color: rgba(255, 255, 255, 0.2); }
 body.in-space .recorder { background: rgba(163, 59, 46, 0.16); border-color: rgba(224, 138, 125, 0.4); }
 
 /* ---------- fun cosmic layer ---------- */
-body.in-space {
+body.in-space { background: #070b1a; }
+body.in-space::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
   background:
     radial-gradient(1000px 600px at 85% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
     radial-gradient(800px 520px at 8% 108%, rgba(217, 70, 239, 0.12), transparent 60%),
-    radial-gradient(600px 420px at 50% 55%, rgba(56, 189, 248, 0.05), transparent 65%),
-    #070b1a;
-  background-attachment: fixed;
+    radial-gradient(600px 420px at 50% 55%, rgba(56, 189, 248, 0.05), transparent 65%);
 }
+body.in-space .privacy-note { position: relative; z-index: 1; }
 body.in-space .brand-name {
   color: #f6ecff;
   text-shadow: 0 0 16px rgba(216, 180, 254, 0.55), 0 0 44px rgba(217, 70, 239, 0.28);

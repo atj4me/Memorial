@@ -116,8 +116,8 @@ function initStarfield() {
       const blinker = !hero && Math.random() < 0.22; // stars that visibly blink
       const tint = Math.random();
       stars.push({
-        x: Math.random() * W,
-        y: Math.random() * H,
+        x: Math.random(), // fractional: stable across resizes (URL bar show/hide)
+        y: Math.random(),
         r: hero ? 1.6 + Math.random() * 1.2 : blinker ? 1 + Math.random() * 1.2 : 0.6 + Math.random() * 1.1,
         base: blinker ? 0.5 : 0.25 + Math.random() * 0.5,
         amp: blinker ? 0.5 : 0.2 + Math.random() * 0.45,
@@ -133,9 +133,9 @@ function initStarfield() {
     W = window.innerWidth; H = window.innerHeight;
     c.width = Math.max(1, Math.round(W * DPR));
     c.height = Math.max(1, Math.round(H * DPR));
-    seed();
   };
   fit();
+  seed(); // once: fractional coords keep stars stable when the viewport resizes
   let rt = null;
   window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(fit, 250); });
 
@@ -148,18 +148,19 @@ function initStarfield() {
     for (const s of stars) {
       const tw = s.base + s.amp * (0.5 + 0.5 * Math.sin(s.ph + el * s.sp));
       const a = Math.max(0.05, Math.min(1, tw)).toFixed(3);
+      const px = s.x * W, py = s.y * H;
       if (s.hero) {
         ctx.save();
         ctx.shadowColor = `rgba(${s.hue}, 0.9)`;
         ctx.shadowBlur = 12;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.arc(px, py, s.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${s.hue}, ${a})`;
         ctx.fill();
         ctx.restore();
       } else {
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.arc(px, py, s.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${s.hue}, ${a})`;
         ctx.fill();
       }
