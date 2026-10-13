@@ -1,11 +1,24 @@
 # Starbound
 
-A private space for the words you still need to say — to those you've lost,
-or to yourself. Create a space per loved one (or a personal journal) and keep
-writing to it: text, photos, video, voice notes. Nothing is ever sent anywhere
-and no reply is expected; each entry is simply released toward the stars.
+A private sky for the words you still need to say — to those you've lost,
+a chapter of your life, or just yourself. Name a star, then keep sending it
+text, photos, videos and voice notes. Nothing is ever sent anywhere and no
+reply is expected; each entry simply flies to your star.
 
-**Live app:** https://atj4me.github.io/Memorial/
+**Live app:** https://atj4me.github.io/Starbound/
+
+## What it is
+
+- **Sky map** — an endless, pannable/zoomable starfield. Tap any unnamed star
+  to claim it; tap your star to open it. Your stars form a constellation.
+  A list view is one tap away.
+- **Star birth & supernova** — naming a star plays a reverse-supernova genesis
+  animation; destroying one plays a supernova. The UI fades away so the sky
+  owns the moment.
+- **Send ritual** — sending a message launches it as a streak of light to
+  your star, which flares in its own colour: "Sent to {name}".
+- **PWA** — installable, works offline (service worker + manifest).
+- **Dark cosmic theme** throughout, no light surfaces.
 
 ## Privacy model — read this first
 
@@ -17,21 +30,24 @@ device:
 - Everything you write, upload, or record is stored locally via IndexedDB and
   never leaves your device. The hosted site is just the empty app shell
   (HTML/CSS/JS). If you open it in a different browser or on a different
-  device, your spaces and entries will not be there — that is by design.
-- **Backup is your responsibility:** use the Export button to download your
-  full dataset as JSON (media embedded as data URLs), and Import to restore
-  it. Keep the backup file somewhere safe.
+  device, your stars and entries will not be there — that is by design.
+- **Backup is your responsibility:** use the Backup button to download your
+  full dataset as JSON (media embedded as data URLs), and Restore to bring
+  it back. Keep the backup file somewhere safe.
 
 If you want someone else to use the app, point them at the live URL — they
 get their own private, local-only copy. Nothing is shared between visitors.
 
 ## Files
 
-- `index.html` — app shell (spaces list, space detail, composer, dialogs)
-- `styles.css` — calm, warm, minimal styling; system fonts; mobile-friendly
-- `app.js` — vanilla JS, no dependencies: IndexedDB persistence, MediaRecorder
-  voice notes, JSON export/import, and the "released to the stars" send
-  animation
+- `index.html` — app shell (sky map, list, star detail, composer, dialogs)
+- `styles.css` — dark cosmic styling; system fonts; mobile-friendly
+- `app.js` — vanilla JS: IndexedDB persistence, MediaRecorder voice notes,
+  JSON backup/restore, canvas starfields, sky-map engine, birth/supernova/send
+  animations
+- `sw.js` — service worker (PWA install + offline)
+- `manifest.webmanifest`, `icons/` — PWA manifest, icons and favicon
+- `vendor/sweetalert2.min.js` — self-hosted dialogs (no CDN; stays on-device)
 
 ## Running locally
 
