@@ -80,6 +80,10 @@ h1, h2, .serif {
 
 /* ---------- views ---------- */
 .view { max-width: 720px; margin: 0 auto; padding: 1.1rem; }
+/* first-paint routing (see the inline script in <head>): the app removes the
+   boot-* class once it takes over visibility with the hidden attribute */
+html.boot-space #view-spaces,
+html.boot-spaces #view-space { display: none; }
 
 .empty { text-align: center; padding: 3.5rem 1rem; color: var(--muted); }
 .empty-title { font-family: Georgia, serif; font-size: 1.4rem; color: var(--ink); margin: 0 0 0.4rem; }

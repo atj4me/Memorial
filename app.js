@@ -1154,6 +1154,7 @@ function importAll(file) {
 document.addEventListener('DOMContentLoaded', () => {
   sky = initStarfield();
   document.body.classList.add('in-space'); // dark theme for the whole app, applied immediately
+  document.documentElement.classList.remove('boot-space', 'boot-spaces'); // app owns view visibility from here
   // Hide the wrong view synchronously: a refresh into a star must never flash the star list first.
   const bootHashId = spaceIdFromHash();
   $('view-spaces').hidden = !!bootHashId;

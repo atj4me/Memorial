@@ -6,7 +6,17 @@
 <meta name="theme-color" content="#070b1a">
 <meta name="description" content="Starbound — a private sky for the words you still need to say. Name a star for those you miss, or for yourself — everything stays on your device.">
 <title>Starbound — letters to the stars</title>
-<link rel="stylesheet" href="styles.css?v=10">
+<script>
+  // First-paint routing: the browser may paint before app.js runs, so decide
+  // here which view the URL wants and hide the other one immediately.
+  (function () {
+    try {
+      var m = location.hash.match(/^#\/space\/(.+)$/);
+      document.documentElement.className += m ? ' boot-space' : ' boot-spaces';
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
 
@@ -106,6 +116,6 @@
   </form>
 </dialog>
 
-<script src="app.js?v=16"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>
