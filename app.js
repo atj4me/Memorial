@@ -2,6 +2,37 @@
  * Vanilla JS, no dependencies, no network calls. All data in IndexedDB, local only. */
 'use strict';
 
+/* ---------------- styled dialogs (SweetAlert2, self-hosted: stays on-device) ---------------- */
+const SwalLib = window.Sweetalert2 || window.Swal;
+function appAlert(message) {
+  if (!SwalLib) { alert(message); return Promise.resolve(); }
+  return SwalLib.fire({
+    text: message,
+    confirmButtonText: 'OK',
+    background: '#141a33',
+    color: '#f5efe2',
+    backdrop: 'rgba(4, 6, 16, 0.72)',
+    confirmButtonColor: '#7c5cff',
+    customClass: { popup: 'sb-swal' },
+  });
+}
+function appConfirm(message, opts = {}) {
+  if (!SwalLib) return Promise.resolve(confirm(message));
+  return SwalLib.fire({
+    text: message,
+    showCancelButton: true,
+    confirmButtonText: opts.confirmText || 'Yes',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true,
+    focusCancel: true,
+    background: '#141a33',
+    color: '#f5efe2',
+    backdrop: 'rgba(4, 6, 16, 0.72)',
+    confirmButtonColor: opts.danger ? '#e5484d' : '#7c5cff',
+    customClass: { popup: 'sb-swal' },
+  }).then((r) => !!r.isConfirmed);
+}
+
 /* ---------------- utils ---------------- */
 const $ = (id) => document.getElementById(id);
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2));
@@ -400,7 +431,7 @@ async function renderSpace() {
     del.title = 'Delete this message';
     del.textContent = '✕';
     del.addEventListener('click', async () => {
-      if (confirm('Delete this message?')) {
+      if (await appConfirm('Delete this message?', { confirmText: 'Delete', danger: true })) {
         await store.messages.del(m.id);
         renderSpace();
       }
@@ -1052,13 +1083,13 @@ let recorder = null, recChunks = [], recTimer = null, recStream = null;
 
 async function startRecording() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert('Voice recording is not available in this browser.');
+    appAlert('Voice recording is not available in this browser.');
     return;
   }
   try {
     recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
-    alert('Microphone access was denied.');
+    appAlert('Microphone access was denied.');
     return;
   }
   recChunks = [];
@@ -1075,7 +1106,7 @@ async function startRecording() {
       const dataUrl = await fileToDataURL(blob);
       pendingAttachments.push({ kind: 'voice', dataUrl, mime: blob.type });
       renderPending();
-    } catch (e) { alert('Could not save the recording.'); }
+    } catch (e) { appAlert('Could not save the recording.'); }
     recStream.getTracks().forEach((t) => t.stop());
     recStream = null;
   };
@@ -1119,7 +1150,7 @@ async function exportAll() {
   const json = JSON.stringify(payload);
   const mb = json.length / 1048576;
   const date = new Date().toISOString().slice(0, 10);
-  if (mb > 25 && !confirm(`This backup is about ${mb.toFixed(0)} MB (videos can be large). Download anyway?`)) return;
+  if (mb > 25 && !(await appConfirm(`This backup is about ${mb.toFixed(0)} MB (videos can be large). Download anyway?`, { confirmText: 'Download' }))) return;
   download(`starbound-backup-${date}.json`, json);
 }
 
@@ -1128,12 +1159,12 @@ function importAll(file) {
   reader.onload = async () => {
     let data;
     try { data = JSON.parse(reader.result); }
-    catch (e) { alert("Couldn't read that file. Is it a Starbound backup?"); return; }
+    catch (e) { appAlert("Couldn't read that file. Is it a Starbound backup?"); return; }
     if (!data || !Array.isArray(data.spaces) || !Array.isArray(data.messages)) {
-      alert('That file does not look like a Starbound backup.');
+      appAlert('That file does not look like a Starbound backup.');
       return;
     }
-    if (!confirm(`Restore this backup? It will replace everything here right now (${data.spaces.length} stars, ${data.messages.length} messages).`)) return;
+    if (!(await appConfirm(`Restore this backup? It will replace everything here right now (${data.spaces.length} stars, ${data.messages.length} messages).`, { confirmText: 'Restore' }))) return;
     await tx('spaces', 'readwrite', (os) => reqAsPromise(os.clear()));
     await store.messages.clear();
     for (const s of data.spaces) {
@@ -1145,7 +1176,7 @@ function importAll(file) {
     currentSpaceId = null;
     await ensureStarPositions();
     await goHome();
-    alert('Backup restored.');
+    appAlert('Backup restored.');
   };
   reader.readAsText(file);
 }
@@ -1222,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-delete-space').addEventListener('click', async () => {
     const s = await store.spaces.get(currentSpaceId);
     if (!s) return;
-    if (!confirm(`Destroy the star “${s.name}”? It will go supernova — one last blaze of light — and then be gone, along with all its messages. This cannot be undone.`)) return;
+    if (!(await appConfirm(`Destroy the star “${s.name}”? It will go supernova — one last blaze of light — and then be gone, along with all its messages. This cannot be undone.`, { confirmText: 'Destroy', danger: true }))) return;
     await playSupernovaAnimation({
       x: typeof s.starX === 'number' ? s.starX : 0.5,
       y: typeof s.starY === 'number' ? s.starY : 0.35,
@@ -1254,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
-    if (f.size > 200 * 1048576 && !confirm('This video is over 200 MB and will be stored on your device. Continue?')) return;
+    if (f.size > 200 * 1048576 && !(await appConfirm('This video is over 200 MB and will be stored on your device. Continue?', { confirmText: 'Continue' }))) return;
     pendingAttachments.push({ kind: 'video', dataUrl: await fileToDataURL(f), mime: f.type });
     renderPending();
   });
