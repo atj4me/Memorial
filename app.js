@@ -534,27 +534,70 @@ function handleMapTap(e) {
 }
 function initMap() {
   const canvas = $('mapview-canvas');
-  let drag = null;
+  const pointers = new Map(); // pointerId -> canvas-local {x, y}
+  let gesture = null;
+
+  const toLocal = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+
   canvas.addEventListener('pointerdown', (e) => {
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    drag = { x: e.clientX, y: e.clientY, cx: SKY.cam.x, cy: SKY.cam.y, t: Date.now(), moved: 0 };
+    const p = toLocal(e);
+    pointers.set(e.pointerId, p);
+    if (pointers.size === 1) {
+      gesture = { type: 'pan', x0: p.x, y0: p.y, cx: SKY.cam.x, cy: SKY.cam.y, t: Date.now(), moved: 0 };
+    } else if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const wpt = screenToWorld(mx, my);
+      gesture = {
+        type: 'pinch',
+        d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        zoom0: SKY.cam.zoom,
+        wx: wpt.x, wy: wpt.y, // world anchor: stays under the fingers
+      };
+    }
   });
   canvas.addEventListener('pointermove', (e) => {
-    if (!drag) return;
-    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
-    SKY.cam.x = drag.cx - dx / SKY.cam.zoom;
-    SKY.cam.y = drag.cy - dy / SKY.cam.zoom;
-    drawMap();
+    if (!pointers.has(e.pointerId) || !gesture) return;
+    pointers.set(e.pointerId, toLocal(e));
+    if (gesture.type === 'pan' && pointers.size === 1) {
+      const p = pointers.get(e.pointerId);
+      const dx = p.x - gesture.x0, dy = p.y - gesture.y0;
+      gesture.moved = Math.max(gesture.moved, Math.hypot(dx, dy));
+      SKY.cam.x = gesture.cx - dx / SKY.cam.zoom;
+      SKY.cam.y = gesture.cy - dy / SKY.cam.zoom;
+      drawMap();
+    } else if (gesture.type === 'pinch' && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const { w, h } = mapSize();
+      const zoom = Math.min(2.5, Math.max(0.4, gesture.zoom0 * (d / gesture.d0)));
+      SKY.cam.zoom = zoom;
+      SKY.cam.x = gesture.wx - (mx - w / 2) / zoom;
+      SKY.cam.y = gesture.wy - (my - h / 2) / zoom;
+      drawMap();
+    }
   });
-  const end = (e) => {
-    if (!drag) return;
-    const tap = drag.moved < 10 && (Date.now() - drag.t) < 500;
-    drag = null;
-    if (tap) handleMapTap(e);
+  const release = (e, cancelled) => {
+    const known = pointers.has(e.pointerId);
+    pointers.delete(e.pointerId);
+    if (pointers.size === 1 && !cancelled) {
+      // pinch dropped back to one finger: resume panning without a jump (no tap)
+      const p = [...pointers.values()][0];
+      gesture = { type: 'pan', x0: p.x, y0: p.y, cx: SKY.cam.x, cy: SKY.cam.y, t: Date.now(), moved: 999 };
+    } else if (pointers.size === 0) {
+      const tap = !cancelled && known && gesture && gesture.type === 'pan' &&
+        gesture.moved < 10 && (Date.now() - gesture.t) < 500;
+      gesture = null;
+      if (tap) handleMapTap(e);
+    }
   };
-  canvas.addEventListener('pointerup', end);
-  canvas.addEventListener('pointercancel', () => { drag = null; });
+  canvas.addEventListener('pointerup', (e) => release(e, false));
+  canvas.addEventListener('pointercancel', (e) => release(e, true));
 
   $('map-zoom-in').addEventListener('click', () => {
     SKY.cam.zoom = Math.min(2.5, SKY.cam.zoom * 1.3); drawMap();
