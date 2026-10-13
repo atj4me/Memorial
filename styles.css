@@ -372,6 +372,17 @@ body.in-space .field input[type="text"] {
   color: #ece7d9;
 }
 body.in-space .field input[type="file"] { color: #a9a294; }
+body.in-space .field input[type="file"]::file-selector-button {
+  font: inherit; font-size: 0.85rem; font-weight: 600;
+  background: rgba(139, 92, 246, 0.18); color: #ddd0fe;
+  border: 1px solid rgba(196, 181, 253, 0.4); border-radius: 999px;
+  padding: 0.45rem 1rem; margin-right: 0.7rem; cursor: pointer;
+  transition: background 0.15s, box-shadow 0.2s;
+}
+body.in-space .field input[type="file"]::file-selector-button:hover {
+  background: rgba(139, 92, 246, 0.32);
+  box-shadow: 0 2px 14px rgba(139, 92, 246, 0.35);
+}
 @media (prefers-reduced-motion: reduce) {
   body.in-space .brand-mark { animation: none; }
   body.in-space .btn, body.in-space .space-card { transition: none; }
