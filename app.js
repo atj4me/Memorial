@@ -1442,6 +1442,44 @@ function stopRecording() {
   else if (recStream) { recStream.getTracks().forEach((t) => t.stop()); recStream = null; }
 }
 
+/* ---------------- your sky in numbers (on-device only, never transmitted) ---------------- */
+async function showStats() {
+  const spaces = await store.spaces.all();
+  const messages = await store.messages.all();
+  const byType = { text: 0, photo: 0, video: 0, voice: 0 };
+  let words = 0;
+  for (const m of messages) {
+    if (byType[m.type] !== undefined) byType[m.type]++;
+    if (m.text) words += m.text.trim().split(/\s+/).filter(Boolean).length;
+  }
+  const first = spaces.length
+    ? new Date(Math.min(...spaces.map((s) => s.createdAt || Date.now())))
+    : null;
+  const fmt = (n) => n.toLocaleString('en-US');
+  const row = (icon, label, value) =>
+    `<div class="stat-row"><span>${icon} ${label}</span><strong>${value}</strong></div>`;
+  const html =
+    row('⭐', 'Stars named', fmt(spaces.length)) +
+    row('💬', 'Messages sent', fmt(messages.length)) +
+    `<div class="stat-sub">✍️ ${fmt(byType.text)} text · 📷 ${fmt(byType.photo)} photos · 🎬 ${fmt(byType.video)} videos · 🎙️ ${fmt(byType.voice)} voice notes</div>` +
+    row('📝', 'Words written', fmt(words)) +
+    (first ? row('🌱', 'First star', first.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) : '') +
+    `<p class="stat-foot">All of this lives only on this device.</p>`;
+  if (window.Sweetalert2 || window.Swal) {
+    const SwalLib = window.Sweetalert2 || window.Swal;
+    await SwalLib.fire({
+      title: 'Your sky in numbers',
+      html,
+      confirmButtonText: 'Close',
+      background: '#141a33',
+      color: '#f5efe2',
+      backdrop: 'rgba(4, 6, 16, 0.72)',
+      confirmButtonColor: '#7c5cff',
+      customClass: { popup: 'sb-swal' },
+    });
+  }
+}
+
 /* ---------------- export / import ---------------- */
 function download(filename, text) {
   const blob = new Blob([text], { type: 'application/json' });
@@ -1537,6 +1575,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('tab-list').addEventListener('click', () => setHomeTab('list'));
   $('btn-new-space').addEventListener('click', () => openSpaceDialog(null));
   $('btn-new-space-fab').addEventListener('click', () => openSpaceDialog(null));
+  $('btn-stats').addEventListener('click', showStats);
   $('btn-cancel-space').addEventListener('click', closeSpaceDialog);
   $('f-photo').addEventListener('change', async (e) => {
     const f = e.target.files[0];
