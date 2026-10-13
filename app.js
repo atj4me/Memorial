@@ -782,6 +782,7 @@ function playStarBirthAnimation(star) {
     overlay.appendChild(canvas);
     overlay.appendChild(caption);
     document.body.appendChild(overlay);
+    document.body.classList.add('cinematic'); // foreground UI yields to the sky
 
     const ctx = canvas.getContext('2d');
     const DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -904,6 +905,7 @@ function playStarBirthAnimation(star) {
         p < 0.66 ? 0 : p < 0.76 ? (p - 0.66) / 0.1 : p > 0.9 ? Math.max(0, 1 - (p - 0.9) / 0.1) : 1
       );
       overlay.style.opacity = String(p < 0.9 ? 1 : 1 - (p - 0.9) / 0.1);
+      if (p >= 0.85) document.body.classList.remove('cinematic'); // UI fades back as the sky settles
 
       if (p < 1) requestAnimationFrame(frame);
       else {
@@ -942,6 +944,7 @@ function playSupernovaAnimation(star) {
     overlay.appendChild(canvas);
     overlay.appendChild(caption);
     document.body.appendChild(overlay);
+    document.body.classList.add('cinematic'); // foreground UI yields to the sky
 
     const ctx = canvas.getContext('2d');
     const DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -1066,6 +1069,7 @@ function playSupernovaAnimation(star) {
         p < 0.3 ? 0 : p < 0.42 ? (p - 0.3) / 0.12 : p > 0.88 ? Math.max(0, 1 - (p - 0.88) / 0.12) : 1
       );
       overlay.style.opacity = String(p < 0.9 ? 1 : 1 - (p - 0.9) / 0.1);
+      if (p >= 0.85) document.body.classList.remove('cinematic'); // UI fades back as the remnant fades
 
       if (p < 1) requestAnimationFrame(frame);
       else {

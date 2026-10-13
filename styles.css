@@ -45,6 +45,14 @@ h1, h2, .serif {
   border-bottom: 1px solid var(--line);
   background: var(--card);
   position: sticky; top: 0; z-index: 20;
+  transition: opacity 0.5s ease;
+}
+/* cinematic mode: during birth/supernova animations the foreground UI gets
+   out of the way so the event owns the whole sky */
+body.cinematic .topbar,
+body.cinematic .view {
+  opacity: 0;
+  pointer-events: none;
 }
 .brand { display: flex; align-items: center; gap: 0.55rem; }
 .brand-mark { font-size: 1.35rem; }
@@ -79,7 +87,7 @@ h1, h2, .serif {
 .btn:disabled { opacity: 0.45; cursor: default; }
 
 /* ---------- views ---------- */
-.view { max-width: 720px; margin: 0 auto; padding: 1.1rem; }
+.view { max-width: 720px; margin: 0 auto; padding: 1.1rem; transition: opacity 0.5s ease; }
 /* first-paint routing (see the inline script in <head>): the app removes the
    boot-* class once it takes over visibility with the hidden attribute */
 html.boot-space #view-spaces,
