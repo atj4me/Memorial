@@ -69,7 +69,7 @@ function downscaleImage(dataURL, maxDim = 1600) {
 
 /* ---------------- IndexedDB ---------------- */
 const DB_NAME = 'memorial';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let dbPromise = null;
 
 function openDB() {
@@ -83,6 +83,7 @@ function openDB() {
         const ms = db.createObjectStore('messages', { keyPath: 'id' });
         ms.createIndex('by-space', 'spaceId', { unique: false });
       }
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -114,6 +115,10 @@ const store = {
     put: (m) => tx('messages', 'readwrite', (os) => reqAsPromise(os.put(m))),
     del: (id) => tx('messages', 'readwrite', (os) => reqAsPromise(os.delete(id))),
     clear: () => tx('messages', 'readwrite', (os) => reqAsPromise(os.clear())),
+  },
+  meta: {
+    get: (key) => tx('meta', 'readonly', (os) => reqAsPromise(os.get(key))),
+    put: (rec) => tx('meta', 'readwrite', (os) => reqAsPromise(os.put(rec))),
   },
 };
 
@@ -771,6 +776,7 @@ async function renderSpace() {
     del.addEventListener('click', async () => {
       if (await appConfirm('Delete this message?', { confirmText: 'Delete', danger: true })) {
         await store.messages.del(m.id);
+        if (typeof noteDeletions === 'function') await noteDeletions([], [m.id]);
         renderSpace();
       }
     });
@@ -1682,6 +1688,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const msgs = await store.messages.bySpace(s.id);
     for (const m of msgs) await store.messages.del(m.id);
     await store.spaces.del(s.id);
+    if (typeof noteDeletions === 'function') await noteDeletions([s.id], msgs.map((m) => m.id));
     await goHome();
   });
 
