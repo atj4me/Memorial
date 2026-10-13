@@ -278,6 +278,10 @@ body.in-space .msg-time,
 body.in-space .msg .msg-label,
 body.in-space .msg-del,
 body.in-space .empty-sub { color: #a9a294; }
+body.in-space .composer {
+  background: #0c1124;
+  box-shadow: 0 -10px 34px rgba(0, 0, 0, 0.55);
+}
 body.in-space .composer textarea {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.14);
