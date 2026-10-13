@@ -237,17 +237,42 @@ async function renderSpaces() {
   }
 }
 
-async function openSpace(id) {
+async function openSpace(id, updateHash = true) {
+  const s = await store.spaces.get(id);
+  if (!s) { goHome(); return; }
   currentSpaceId = id;
   pendingAttachments = [];
   await renderSpace();
   showView('space');
+  if (updateHash) {
+    const h = '#/space/' + encodeURIComponent(id);
+    if (location.hash !== h) location.hash = h;
+  }
 }
+
+/* Remember the open space in the URL so a refresh (or back/forward) restores it. */
+function spaceIdFromHash() {
+  const m = location.hash.match(/^#\/space\/([^/]+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function goHome() {
+  currentSpaceId = null;
+  if (location.hash.startsWith('#/space/')) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  renderSpaces();
+  showView('spaces');
+}
+window.addEventListener('hashchange', () => {
+  const id = spaceIdFromHash();
+  if (id) openSpace(id, false);
+  else goHome();
+});
 
 /* ---------------- space detail ---------------- */
 async function renderSpace() {
   const s = await store.spaces.get(currentSpaceId);
-  if (!s) { showView('spaces'); return; }
+  if (!s) { goHome(); return; }
 
   $('space-name').textContent = s.name;
   $('space-dates').textContent = s.dates || '';
@@ -639,7 +664,9 @@ function download(filename, text) {
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  // Don't revoke the object URL on a timer: large backups (videos) can still be
+  // streaming to the download manager when an early revoke would truncate them.
+  setTimeout(() => a.remove(), 4000);
 }
 
 async function exportAll() {
@@ -677,8 +704,7 @@ function importAll(file) {
       if (m && m.id && m.spaceId) await store.messages.put({ id: m.id, spaceId: m.spaceId, type: m.type || 'text', text: m.text || '', dataUrl: m.dataUrl || '', mime: m.mime || '', createdAt: m.createdAt || Date.now() });
     }
     currentSpaceId = null;
-    await renderSpaces();
-    showView('spaces');
+    goHome();
     alert('Backup imported.');
   };
   reader.readAsText(file);
@@ -688,8 +714,10 @@ function importAll(file) {
 document.addEventListener('DOMContentLoaded', () => {
   initStarfield();
   document.body.classList.add('in-space'); // dark theme for the whole app, applied immediately
-  showView('spaces');
   renderSpaces();
+  const deepId = spaceIdFromHash();
+  if (deepId) openSpace(deepId, false);
+  else showView('spaces');
 
   $('btn-new-space').addEventListener('click', () => openSpaceDialog(null));
   $('btn-cancel-space').addEventListener('click', closeSpaceDialog);
@@ -729,10 +757,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  $('btn-back').addEventListener('click', async () => {
-    currentSpaceId = null;
-    await renderSpaces();
-    showView('spaces');
+  $('btn-back').addEventListener('click', () => {
+    goHome();
   });
 
   $('btn-edit-space').addEventListener('click', async () => {
@@ -747,9 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const msgs = await store.messages.bySpace(s.id);
     for (const m of msgs) await store.messages.del(m.id);
     await store.spaces.del(s.id);
-    currentSpaceId = null;
-    await renderSpaces();
-    showView('spaces');
+    goHome();
   });
 
   $('btn-send').addEventListener('click', sendMessage);
