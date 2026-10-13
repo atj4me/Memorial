@@ -724,6 +724,166 @@ function playReleaseAnimation(preview, dest) {
   });
 }
 
+/* ---------------- star-birth animation (reverse supernova) ----------------
+ * Naming a star ends with a little genesis: loose stardust across the sky
+ * collapses inward — a supernova in reverse — ignites, and settles as your
+ * new pinned star. */
+function playStarBirthAnimation(star) {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return Promise.resolve();
+  }
+  star = star || {};
+  const hx = typeof star.x === 'number' ? star.x : 0.5;
+  const hy = typeof star.y === 'number' ? star.y : 0.35;
+  const hue = star.hue || '255, 220, 180';
+  const name = String(star.name || 'your star');
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'stars-overlay clear'; // the real sky shows through
+    overlay.setAttribute('aria-hidden', 'true');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'stars-canvas';
+    const caption = document.createElement('div');
+    caption.className = 'stars-caption';
+    const shortName = name.length > 24 ? name.slice(0, 24) + '…' : name;
+    caption.textContent = shortName + ' joins your sky';
+    overlay.appendChild(canvas);
+    overlay.appendChild(caption);
+    document.body.appendChild(overlay);
+
+    const ctx = canvas.getContext('2d');
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    let W = 0, H = 0;
+    const fit = () => {
+      W = overlay.clientWidth; H = overlay.clientHeight;
+      canvas.width = Math.max(1, Math.round(W * DPR));
+      canvas.height = Math.max(1, Math.round(H * DPR));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+
+    // pre-rendered glow sprite: fast, no per-particle shadowBlur
+    const sprite = document.createElement('canvas');
+    sprite.width = sprite.height = 64;
+    const sctx = sprite.getContext('2d');
+    const sg = sctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    sg.addColorStop(0, 'rgba(255,255,255,1)');
+    sg.addColorStop(0.3, `rgba(${hue},0.85)`);
+    sg.addColorStop(1, `rgba(${hue},0)`);
+    sctx.fillStyle = sg;
+    sctx.fillRect(0, 0, 64, 64);
+
+    const tx0 = hx * W, ty0 = hy * H;
+    const maxWH = Math.max(W, H);
+    const P = [];
+    for (let i = 0; i < 130; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const dist = (0.3 + Math.random() * 0.7) * maxWH;
+      P.push({
+        sx: tx0 + Math.cos(ang) * dist,
+        sy: ty0 + Math.sin(ang) * dist,
+        size: 8 + Math.random() * 18,
+        delay: Math.random() * 0.15,
+        dur: 0.3 + Math.random() * 0.15,
+        wob: Math.random() * Math.PI * 2,
+        wsp: 2 + Math.random() * 4,
+      });
+    }
+
+    const DUR = 3000;
+    const t0 = performance.now();
+    const IGNITE = 0.62;
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+    function frame(t) {
+      const el = (t - t0) / 1000;
+      const p = Math.min(1, (t - t0) / DUR);
+      const tx = hx * W, ty = hy * H;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      // --- phase 1: stardust collapses inward ---
+      if (p < IGNITE) {
+        for (const pt of P) {
+          const lp = clamp01((p - pt.delay) / pt.dur);
+          if (lp >= 1) continue; // absorbed into the core
+          const e = lp * lp * lp; // accelerating inward, like gravity
+          const wob = Math.sin(el * pt.wsp + pt.wob) * 26 * (1 - e);
+          const px = pt.sx + (tx - pt.sx) * e - Math.sin(pt.wob) * wob * 0.3;
+          const py = pt.sy + (ty - pt.sy) * e + Math.cos(pt.wob) * wob * 0.3;
+          const sz = Math.max(2, pt.size * (1 - e * 0.7));
+          ctx.globalAlpha = Math.min(1, 0.25 + e * 1.1);
+          ctx.drawImage(sprite, px - sz / 2, py - sz / 2, sz, sz);
+        }
+        ctx.globalAlpha = 1;
+        const cp = clamp01((p - 0.3) / (IGNITE - 0.3)); // compressing core
+        if (cp > 0) {
+          const cr = 4 + cp * 26;
+          ctx.globalAlpha = 0.35 + cp * 0.65;
+          ctx.drawImage(sprite, tx - cr, ty - cr, cr * 2, cr * 2);
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // --- phase 2: ignition flash ---
+      if (p >= IGNITE && p < 0.8) {
+        const fp = (p - IGNITE) / 0.18;
+        const fa = Math.sin(Math.min(1, fp) * Math.PI);
+        const fr = Math.min(W, H) * 0.45 * (0.3 + 0.7 * fp);
+        const fg = ctx.createRadialGradient(tx, ty, 0, tx, ty, fr);
+        fg.addColorStop(0, `rgba(255,255,255,${(0.95 * fa).toFixed(3)})`);
+        fg.addColorStop(0.35, `rgba(${hue},${(0.75 * fa).toFixed(3)})`);
+        fg.addColorStop(1, `rgba(${hue},0)`);
+        ctx.beginPath();
+        ctx.arc(tx, ty, fr, 0, Math.PI * 2);
+        ctx.fillStyle = fg;
+        ctx.fill();
+      }
+
+      // --- phase 3: birth rings, then the new star settles ---
+      if (p >= IGNITE) {
+        for (let k = 0; k < 2; k++) {
+          const rpk = clamp01((p - IGNITE - k * 0.08) / 0.3);
+          if (rpk <= 0 || rpk >= 1) continue;
+          ctx.beginPath();
+          ctx.arc(tx, ty, 8 + rpk * Math.min(W, H) * 0.4, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${hue}, ${(0.55 * (1 - rpk)).toFixed(3)})`;
+          ctx.lineWidth = Math.max(0.5, 3 - rpk * 2);
+          ctx.stroke();
+        }
+        const sa = clamp01((p - 0.72) / 0.2); // matches the sky's own rendering
+        if (sa > 0) {
+          const haloR = 26;
+          const hg = ctx.createRadialGradient(tx, ty, 0, tx, ty, haloR);
+          hg.addColorStop(0, `rgba(${hue}, ${(0.5 * sa).toFixed(3)})`);
+          hg.addColorStop(1, `rgba(${hue}, 0)`);
+          ctx.beginPath();
+          ctx.arc(tx, ty, haloR, 0, Math.PI * 2);
+          ctx.fillStyle = hg;
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(tx, ty, 3.2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${sa.toFixed(3)})`;
+          ctx.fill();
+        }
+      }
+
+      caption.style.opacity = String(
+        p < 0.66 ? 0 : p < 0.76 ? (p - 0.66) / 0.1 : p > 0.9 ? Math.max(0, 1 - (p - 0.9) / 0.1) : 1
+      );
+      overlay.style.opacity = String(p < 0.9 ? 1 : 1 - (p - 0.9) / 0.1);
+
+      if (p < 1) requestAnimationFrame(frame);
+      else {
+        window.removeEventListener('resize', fit);
+        overlay.remove();
+        resolve();
+      }
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
 /* ---------------- voice recording ---------------- */
 let recorder = null, recChunks = [], recTimer = null, recStream = null;
 
@@ -868,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
       closeSpaceDialog();
       await renderSpace();
     } else {
-      const s = {
+      const rec = {
         id: uid(), name,
         dates: $('f-dates').value.trim(),
         dedication: $('f-dedication').value.trim(),
@@ -877,10 +1037,12 @@ document.addEventListener('DOMContentLoaded', () => {
         hue: pickHue(),
         createdAt: Date.now(),
       };
-      await store.spaces.put(s);
+      await store.spaces.put(rec);
       closeSpaceDialog();
       await renderSpaces();
-      openSpace(s.id);
+      await playStarBirthAnimation({ x: rec.starX, y: rec.starY, hue: rec.hue, name: rec.name });
+      await syncSky();
+      openSpace(rec.id);
     }
   });
 
