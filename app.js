@@ -599,6 +599,8 @@ function importAll(file) {
 /* ---------------- wire up ---------------- */
 document.addEventListener('DOMContentLoaded', () => {
   initStarfield();
+  document.body.classList.add('in-space'); // dark theme for the whole app, applied immediately
+  showView('spaces');
   renderSpaces();
 
   $('btn-new-space').addEventListener('click', () => openSpaceDialog(null));
