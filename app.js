@@ -777,7 +777,7 @@ function playStarBirthAnimation(star) {
     const tx0 = hx * W, ty0 = hy * H;
     const maxWH = Math.max(W, H);
     const P = [];
-    for (let i = 0; i < 130; i++) {
+    for (let i = 0; i < 200; i++) {
       const ang = Math.random() * Math.PI * 2;
       const dist = (0.3 + Math.random() * 0.7) * maxWH;
       P.push({
@@ -791,7 +791,7 @@ function playStarBirthAnimation(star) {
       });
     }
 
-    const DUR = 3000;
+    const DUR = 3300;
     const t0 = performance.now();
     const IGNITE = 0.62;
     const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -830,7 +830,7 @@ function playStarBirthAnimation(star) {
       if (p >= IGNITE && p < 0.8) {
         const fp = (p - IGNITE) / 0.18;
         const fa = Math.sin(Math.min(1, fp) * Math.PI);
-        const fr = Math.min(W, H) * 0.45 * (0.3 + 0.7 * fp);
+        const fr = Math.min(W, H) * 0.65 * (0.3 + 0.7 * fp);
         const fg = ctx.createRadialGradient(tx, ty, 0, tx, ty, fr);
         fg.addColorStop(0, `rgba(255,255,255,${(0.95 * fa).toFixed(3)})`);
         fg.addColorStop(0.35, `rgba(${hue},${(0.75 * fa).toFixed(3)})`);
@@ -847,7 +847,7 @@ function playStarBirthAnimation(star) {
           const rpk = clamp01((p - IGNITE - k * 0.08) / 0.3);
           if (rpk <= 0 || rpk >= 1) continue;
           ctx.beginPath();
-          ctx.arc(tx, ty, 8 + rpk * Math.min(W, H) * 0.4, 0, Math.PI * 2);
+          ctx.arc(tx, ty, 8 + rpk * Math.min(W, H) * 0.55, 0, Math.PI * 2);
           ctx.strokeStyle = `rgba(${hue}, ${(0.55 * (1 - rpk)).toFixed(3)})`;
           ctx.lineWidth = Math.max(0.5, 3 - rpk * 2);
           ctx.stroke();
@@ -871,6 +871,168 @@ function playStarBirthAnimation(star) {
 
       caption.style.opacity = String(
         p < 0.66 ? 0 : p < 0.76 ? (p - 0.66) / 0.1 : p > 0.9 ? Math.max(0, 1 - (p - 0.9) / 0.1) : 1
+      );
+      overlay.style.opacity = String(p < 0.9 ? 1 : 1 - (p - 0.9) / 0.1);
+
+      if (p < 1) requestAnimationFrame(frame);
+      else {
+        window.removeEventListener('resize', fit);
+        overlay.remove();
+        resolve();
+      }
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+/* ---------------- supernova animation (star destruction) ----------------
+ * Stars can't be deleted — they can only be destroyed. The star swells
+ * white-hot, detonates in a super-bright flash, and hurls debris and
+ * shockwaves across the sky before fading into a remnant glow. */
+function playSupernovaAnimation(star) {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return Promise.resolve();
+  }
+  star = star || {};
+  const hx = typeof star.x === 'number' ? star.x : 0.5;
+  const hy = typeof star.y === 'number' ? star.y : 0.35;
+  const hue = star.hue || '255, 220, 180';
+  const name = String(star.name || 'your star');
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'stars-overlay clear'; // the real sky shows through
+    overlay.setAttribute('aria-hidden', 'true');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'stars-canvas';
+    const caption = document.createElement('div');
+    caption.className = 'stars-caption';
+    const shortName = name.length > 24 ? name.slice(0, 24) + '…' : name;
+    caption.textContent = shortName + ' goes supernova';
+    overlay.appendChild(canvas);
+    overlay.appendChild(caption);
+    document.body.appendChild(overlay);
+
+    const ctx = canvas.getContext('2d');
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
+    let W = 0, H = 0;
+    const fit = () => {
+      W = overlay.clientWidth; H = overlay.clientHeight;
+      canvas.width = Math.max(1, Math.round(W * DPR));
+      canvas.height = Math.max(1, Math.round(H * DPR));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+
+    // pre-rendered glow sprite: fast, no per-particle shadowBlur
+    const sprite = document.createElement('canvas');
+    sprite.width = sprite.height = 64;
+    const sctx = sprite.getContext('2d');
+    const sg = sctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    sg.addColorStop(0, 'rgba(255,255,255,1)');
+    sg.addColorStop(0.3, `rgba(${hue},0.85)`);
+    sg.addColorStop(1, `rgba(${hue},0)`);
+    sctx.fillStyle = sg;
+    sctx.fillRect(0, 0, 64, 64);
+
+    const tx0 = hx * W, ty0 = hy * H;
+    const maxWH = Math.max(W, H);
+    const minWH = Math.min(W, H);
+    const D = [];
+    for (let i = 0; i < 220; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      D.push({
+        dx: Math.cos(ang), dy: Math.sin(ang),
+        speed: (0.25 + Math.random() * 0.75) * maxWH,
+        size: 6 + Math.random() * 22,
+        delay: 0.22 + Math.random() * 0.18,
+        life: 0.45 + Math.random() * 0.25,
+      });
+    }
+
+    const DUR = 3600;
+    const t0 = performance.now();
+    const DETONATE = 0.22;
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+    function frame(t) {
+      const p = Math.min(1, (t - t0) / DUR);
+      const tx = hx * W, ty = hy * H;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      // --- phase 1: the star swells white-hot ---
+      if (p < DETONATE + 0.08) {
+        const sp = clamp01(p / DETONATE);
+        const flicker = 0.9 + 0.1 * Math.sin(p * 90);
+        const sr = (5 + sp * 46) * flicker;
+        ctx.globalAlpha = Math.min(1, 0.5 + sp * 0.7);
+        ctx.drawImage(sprite, tx - sr, ty - sr, sr * 2, sr * 2);
+        ctx.globalAlpha = 1;
+      }
+
+      // --- phase 2: detonation — super bright ---
+      if (p >= DETONATE && p < 0.62) {
+        const rise = clamp01((p - DETONATE) / 0.06);
+        const fall = clamp01((p - 0.3) / 0.32);
+        const fa = Math.min(rise, 1 - fall * 0.85);
+        if (fa > 0) {
+          const fr = minWH * 0.8;
+          const fg = ctx.createRadialGradient(tx, ty, 0, tx, ty, fr);
+          fg.addColorStop(0, `rgba(255,255,255,${(0.98 * fa).toFixed(3)})`);
+          fg.addColorStop(0.3, `rgba(255,255,255,${(0.85 * fa).toFixed(3)})`);
+          fg.addColorStop(0.55, `rgba(${hue},${(0.55 * fa).toFixed(3)})`);
+          fg.addColorStop(1, `rgba(${hue},0)`);
+          ctx.beginPath();
+          ctx.arc(tx, ty, fr, 0, Math.PI * 2);
+          ctx.fillStyle = fg;
+          ctx.fill();
+          // white wash over everything at peak brilliance
+          ctx.fillStyle = `rgba(255,252,245,${(0.22 * fa).toFixed(3)})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      // --- phase 3: debris hurled outward + shockwaves ---
+      if (p >= DETONATE) {
+        for (const d of D) {
+          const lp = clamp01((p - d.delay) / d.life);
+          if (lp <= 0 || lp >= 1) continue;
+          const e = 1 - Math.pow(1 - lp, 3); // fast start, coasting
+          const px = tx0 + d.dx * d.speed * e;
+          const py = ty0 + d.dy * d.speed * e;
+          const sz = Math.max(2, d.size * (1 - lp * 0.8));
+          ctx.globalAlpha = (1 - lp) * 0.9;
+          ctx.drawImage(sprite, px - sz / 2, py - sz / 2, sz, sz);
+        }
+        ctx.globalAlpha = 1;
+        for (let k = 0; k < 3; k++) {
+          const rpk = clamp01((p - DETONATE - k * 0.07) / 0.5);
+          if (rpk <= 0 || rpk >= 1) continue;
+          ctx.beginPath();
+          ctx.arc(tx, ty, 10 + rpk * maxWH * 0.55, 0, Math.PI * 2);
+          ctx.strokeStyle = k === 1
+            ? `rgba(255,255,255,${(0.5 * (1 - rpk)).toFixed(3)})`
+            : `rgba(${hue},${(0.6 * (1 - rpk)).toFixed(3)})`;
+          ctx.lineWidth = Math.max(0.5, 4.5 - rpk * 3.5);
+          ctx.stroke();
+        }
+      }
+
+      // --- phase 4: the remnant glow fades; the star is gone ---
+      if (p > 0.62) {
+        const rp = clamp01((p - 0.62) / 0.38);
+        const rr = minWH * 0.3 * (0.4 + rp * 0.6);
+        const rg = ctx.createRadialGradient(tx, ty, 0, tx, ty, rr);
+        rg.addColorStop(0, `rgba(${hue},${(0.3 * (1 - rp)).toFixed(3)})`);
+        rg.addColorStop(1, `rgba(${hue},0)`);
+        ctx.beginPath();
+        ctx.arc(tx, ty, rr, 0, Math.PI * 2);
+        ctx.fillStyle = rg;
+        ctx.fill();
+      }
+
+      caption.style.opacity = String(
+        p < 0.3 ? 0 : p < 0.42 ? (p - 0.3) / 0.12 : p > 0.88 ? Math.max(0, 1 - (p - 0.88) / 0.12) : 1
       );
       overlay.style.opacity = String(p < 0.9 ? 1 : 1 - (p - 0.9) / 0.1);
 
@@ -1059,7 +1221,13 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-delete-space').addEventListener('click', async () => {
     const s = await store.spaces.get(currentSpaceId);
     if (!s) return;
-    if (!confirm(`Delete the star “${s.name}” and all its messages? This cannot be undone.`)) return;
+    if (!confirm(`Destroy the star “${s.name}”? It will go supernova — one last blaze of light — and then be gone, along with all its messages. This cannot be undone.`)) return;
+    await playSupernovaAnimation({
+      x: typeof s.starX === 'number' ? s.starX : 0.5,
+      y: typeof s.starY === 'number' ? s.starY : 0.35,
+      hue: s.hue || '255, 220, 180',
+      name: s.name,
+    });
     const msgs = await store.messages.bySpace(s.id);
     for (const m of msgs) await store.messages.del(m.id);
     await store.spaces.del(s.id);
