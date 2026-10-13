@@ -314,7 +314,7 @@ body.in-space .brand-name {
 body.in-space .brand-mark {
   display: inline-block;
   animation: floaty 4s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px rgba(240, 171, 252, 0.7));
+  text-shadow: 0 0 10px rgba(240, 171, 252, 0.8);
 }
 @keyframes floaty { 50% { transform: translateY(-4px) rotate(8deg); } }
 body.in-space .empty-title {
@@ -323,6 +323,7 @@ body.in-space .empty-title {
 }
 body.in-space .btn {
   transition: transform 0.12s, box-shadow 0.2s, background 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 body.in-space .btn:hover { transform: translateY(-1px); }
 body.in-space .btn:active { transform: translateY(0) scale(0.98); }
@@ -335,7 +336,7 @@ body.in-space .btn-primary {
 }
 body.in-space .btn-primary:hover {
   box-shadow: 0 6px 30px rgba(217, 70, 239, 0.55);
-  filter: brightness(1.08);
+  background: linear-gradient(135deg, #9d6bf7, #e35df0);
 }
 body.in-space .space-card { transition: transform 0.15s, box-shadow 0.2s, border-color 0.2s; }
 body.in-space .space-card:hover {
