@@ -400,6 +400,7 @@ body.in-space .privacy-note {
   color: #a9a294;
 }
 body.in-space .space-hero,
+body.in-space .star-row,
 body.in-space .msg,
 body.in-space .composer {
   background: rgba(255, 255, 255, 0.05);
