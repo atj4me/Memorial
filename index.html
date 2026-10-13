@@ -19,7 +19,7 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
 
@@ -41,17 +41,24 @@
   <button type="button" id="privacy-dismiss" class="privacy-dismiss" aria-label="Dismiss">✕</button>
 </p>
 
-<!-- ============ STARS LIST ============ -->
+<!-- ============ HOME: MAP + LIST ============ -->
 <main id="view-spaces" class="view">
-  <div id="spaces-empty" class="empty" hidden>
-    <p class="empty-title">No stars yet</p>
-    <p class="empty-sub">Name a star — for someone you've lost, a chapter of your life,<br>or just yourself. It will shine in your sky, waiting for your words.</p>
+  <div class="view-toggle" role="tablist" aria-label="Choose view">
+    <button id="tab-map" class="view-tab active" role="tab" aria-selected="true" type="button">Map</button>
+    <button id="tab-list" class="view-tab" role="tab" aria-selected="false" type="button">List</button>
   </div>
-  <div id="star-map" class="star-map" hidden>
-    <canvas id="map-canvas" class="map-canvas" aria-hidden="true"></canvas>
-    <div id="map-stars"></div>
-    <p class="map-hint">Tap a star to open it</p>
-  </div>
+  <section id="home-map" class="home-map" aria-label="Sky map">
+    <canvas id="mapview-canvas"></canvas>
+    <div class="map-controls">
+      <button id="map-zoom-in" type="button" aria-label="Zoom in">+</button>
+      <button id="map-zoom-out" type="button" aria-label="Zoom out">−</button>
+      <button id="map-recenter" type="button" aria-label="Go to my stars">⌂</button>
+    </div>
+    <p class="map-hint" id="map-hint">Drag to explore the sky · tap a star to claim it</p>
+  </section>
+  <section id="home-list" class="home-list" hidden aria-label="Star list">
+    <div id="list-rows"></div>
+  </section>
   <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New star</button>
 </main>
 
@@ -125,6 +132,6 @@
 </dialog>
 
 <script src="vendor/sweetalert2.min.js?v=1"></script>
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>

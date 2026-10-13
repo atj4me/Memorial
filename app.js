@@ -166,7 +166,7 @@ function showView(name) {
   $('view-spaces').hidden = name !== 'spaces';
   $('view-space').hidden = name !== 'space';
   document.body.classList.add('in-space'); // the whole app is dark themed
-  if (name === 'spaces') drawMapSky(); // in case it rendered while hidden
+  if (name === 'spaces') drawMap();
   window.scrollTo(0, 0);
 }
 
@@ -339,68 +339,298 @@ function initStarfield() {
 }
 
 /* ---------------- spaces list ---------------- */
-async function renderSpaces() {
-  const spaces = await store.spaces.all();
-  spaces.sort((a, b) => b.createdAt - a.createdAt);
-  const map = $('star-map');
-  const layer = $('map-stars');
-  layer.innerHTML = '';
-  const has = spaces.length > 0;
-  $('spaces-empty').hidden = has;
-  map.hidden = !has;
+/* ---------------- interactive sky map (endless, pannable) ----------------
+ * Your stars live at fixed world coordinates; the rest of the sky is
+ * generated procedurally per sector, so it never runs out. Tap your star
+ * to open it, tap any unnamed star to claim it. */
+const SKY = {
+  cam: { x: 1000, y: 1000, zoom: 1 },
+  sectors: new Map(),
+  mine: [],
+};
+const SECTOR = 500;
+let homeTab = 'map';
+let pendingStarPos = null;    // { worldX, worldY } preset from a map tap
+let pendingStarScreen = null; // { x, y } viewport fractions for the birth animation
 
-  for (const s of spaces) {
-    const b = document.createElement('button');
-    b.className = 'map-star';
-    b.type = 'button';
-    b.setAttribute('aria-label', `Open star ${s.name}`);
-    const x = typeof s.starX === 'number' ? s.starX : 0.5;
-    const y = typeof s.starY === 'number' ? s.starY : 0.4;
-    b.style.left = (x * 100).toFixed(2) + '%';
-    b.style.top = (y * 100).toFixed(2) + '%';
-    b.style.setProperty('--hue', s.hue || '255, 220, 180');
-    b.innerHTML = `<span class="map-star-dot" style="animation-delay: ${(Math.random() * 3.2).toFixed(2)}s"></span>` +
-      `<span class="map-star-name">${esc(s.name)}</span>`;
-    b.addEventListener('click', () => openSpace(s.id));
-    layer.appendChild(b);
-  }
-  if (has) drawMapSky();
+function hash2(x, y) {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (h ^ (h >>> 16)) >>> 0;
 }
-
-/* faint static starfield behind the plotted stars (seeded: stable per size) */
-function drawMapSky() {
-  const map = $('star-map');
-  const canvas = $('map-canvas');
-  if (!map || !canvas || map.hidden) return;
+function mulberry(seed) {
+  let a = seed | 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function getSector(sx, sy) {
+  const k = sx + ',' + sy;
+  let s = SKY.sectors.get(k);
+  if (!s) {
+    const rnd = mulberry(hash2(sx, sy));
+    s = [];
+    const n = 12 + Math.floor(rnd() * 8);
+    for (let i = 0; i < n; i++) {
+      s.push({
+        wx: sx * SECTOR + rnd() * SECTOR,
+        wy: sy * SECTOR + rnd() * SECTOR,
+        r: 1 + rnd() * 2.2,
+        b: 0.3 + rnd() * 0.7,
+      });
+    }
+    SKY.sectors.set(k, s);
+  }
+  return s;
+}
+function nearClaimed(wx, wy, dist) {
+  for (const m of SKY.mine) {
+    if (typeof m.worldX !== 'number') continue;
+    if (Math.hypot(m.worldX - wx, m.worldY - wy) < dist) return true;
+  }
+  return false;
+}
+function mapEl() { return $('home-map'); }
+function mapSize() {
+  const el = mapEl();
+  return el ? { w: el.clientWidth, h: el.clientHeight } : { w: 0, h: 0 };
+}
+function worldToScreen(wx, wy) {
+  const { w, h } = mapSize();
+  return {
+    x: (wx - SKY.cam.x) * SKY.cam.zoom + w / 2,
+    y: (wy - SKY.cam.y) * SKY.cam.zoom + h / 2,
+  };
+}
+function screenToWorld(sx, sy) {
+  const { w, h } = mapSize();
+  return {
+    x: SKY.cam.x + (sx - w / 2) / SKY.cam.zoom,
+    y: SKY.cam.y + (sy - h / 2) / SKY.cam.zoom,
+  };
+}
+function visibleSkyStars() {
+  const { w, h } = mapSize();
+  if (!w || !h) return [];
+  const z = SKY.cam.zoom;
+  const x0 = Math.floor((SKY.cam.x - w / 2 / z) / SECTOR);
+  const x1 = Math.floor((SKY.cam.x + w / 2 / z) / SECTOR);
+  const y0 = Math.floor((SKY.cam.y - h / 2 / z) / SECTOR);
+  const y1 = Math.floor((SKY.cam.y + h / 2 / z) / SECTOR);
+  const out = [];
+  for (let sx = x0; sx <= x1; sx++) {
+    for (let sy = y0; sy <= y1; sy++) {
+      for (const st of getSector(sx, sy)) {
+        if (!nearClaimed(st.wx, st.wy, 26)) out.push(st);
+      }
+    }
+  }
+  return out;
+}
+function drawMap() {
+  const canvas = $('mapview-canvas');
+  const el = mapEl();
+  if (!canvas || !el || el.hidden) return;
   const DPR = Math.min(2, window.devicePixelRatio || 1);
-  const W = map.clientWidth, H = map.clientHeight;
+  const W = el.clientWidth, H = el.clientHeight;
   if (!W || !H) return;
   canvas.width = Math.max(1, Math.round(W * DPR));
   canvas.height = Math.max(1, Math.round(H * DPR));
   const ctx = canvas.getContext('2d');
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
-  let a = 987654321;
-  const rnd = () => {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  for (let i = 0; i < 70; i++) {
-    ctx.globalAlpha = 0.2 + rnd() * 0.5;
-    ctx.fillStyle = '#ffffff';
+
+  for (const st of visibleSkyStars()) {
+    const p = worldToScreen(st.wx, st.wy);
+    if (p.x < -8 || p.x > W + 8 || p.y < -8 || p.y > H + 8) continue;
+    ctx.globalAlpha = st.b;
+    ctx.fillStyle = '#dfe6ff';
     ctx.beginPath();
-    ctx.arc(rnd() * W, rnd() * H, 0.5 + rnd() * 1.1, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, st.r, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  const mine = SKY.mine.filter((s) => typeof s.worldX === 'number');
+  if (mine.length > 1) { // your constellation
+    ctx.strokeStyle = 'rgba(150, 170, 255, 0.30)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    mine.forEach((s, i) => {
+      const p = worldToScreen(s.worldX, s.worldY);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+  }
+
+  ctx.textAlign = 'center';
+  for (const s of mine) {
+    const p = worldToScreen(s.worldX, s.worldY);
+    if (p.x < -50 || p.x > W + 50 || p.y < -50 || p.y > H + 50) continue;
+    const hue = s.hue || '255, 220, 180';
+    const hg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 26);
+    hg.addColorStop(0, `rgba(${hue},0.55)`);
+    hg.addColorStop(1, `rgba(${hue},0)`);
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 26, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgba(${hue},0.95)`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 7.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(245, 239, 226, 0.92)';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 6;
+    const label = s.name.length > 18 ? s.name.slice(0, 18) + '…' : s.name;
+    ctx.fillText(label, p.x, p.y + 28);
+    ctx.shadowBlur = 0;
+  }
 }
-let mapSkyT = null;
-window.addEventListener('resize', () => {
-  clearTimeout(mapSkyT);
-  mapSkyT = setTimeout(drawMapSky, 200);
-});
+function recenterMap() {
+  const mine = SKY.mine.filter((s) => typeof s.worldX === 'number');
+  if (mine.length) {
+    SKY.cam.x = mine.reduce((a, s) => a + s.worldX, 0) / mine.length;
+    SKY.cam.y = mine.reduce((a, s) => a + s.worldY, 0) / mine.length;
+  } else {
+    SKY.cam.x = 1000; SKY.cam.y = 1000;
+  }
+  SKY.cam.zoom = 1;
+  drawMap();
+}
+function buzz(ms) {
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) {}
+}
+function handleMapTap(e) {
+  const canvas = $('mapview-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  const wpt = screenToWorld(sx, sy);
+  const tol = 38 / SKY.cam.zoom;
+
+  let best = null, bestD = tol;
+  for (const s of SKY.mine) {
+    if (typeof s.worldX !== 'number') continue;
+    const d = Math.hypot(s.worldX - wpt.x, s.worldY - wpt.y);
+    if (d < bestD) { best = s; bestD = d; }
+  }
+  if (best) { buzz(12); openSpace(best.id); return; }
+
+  let bg = null, bgD = tol;
+  for (const st of visibleSkyStars()) {
+    const d = Math.hypot(st.wx - wpt.x, st.wy - wpt.y);
+    if (d < bgD) { bg = st; bgD = d; }
+  }
+  if (bg) {
+    buzz(8);
+    pendingStarPos = { worldX: bg.wx, worldY: bg.wy };
+    pendingStarScreen = {
+      x: (rect.left + sx) / window.innerWidth,
+      y: (rect.top + sy) / window.innerHeight,
+    };
+    openSpaceDialog(null);
+  }
+}
+function initMap() {
+  const canvas = $('mapview-canvas');
+  let drag = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    drag = { x: e.clientX, y: e.clientY, cx: SKY.cam.x, cy: SKY.cam.y, t: Date.now(), moved: 0 };
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+    SKY.cam.x = drag.cx - dx / SKY.cam.zoom;
+    SKY.cam.y = drag.cy - dy / SKY.cam.zoom;
+    drawMap();
+  });
+  const end = (e) => {
+    if (!drag) return;
+    const tap = drag.moved < 10 && (Date.now() - drag.t) < 500;
+    drag = null;
+    if (tap) handleMapTap(e);
+  };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', () => { drag = null; });
+
+  $('map-zoom-in').addEventListener('click', () => {
+    SKY.cam.zoom = Math.min(2.5, SKY.cam.zoom * 1.3); drawMap();
+  });
+  $('map-zoom-out').addEventListener('click', () => {
+    SKY.cam.zoom = Math.max(0.4, SKY.cam.zoom / 1.3); drawMap();
+  });
+  $('map-recenter').addEventListener('click', recenterMap);
+
+  let rzT = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(rzT);
+    rzT = setTimeout(() => { if (homeTab === 'map' && !$('view-spaces').hidden) drawMap(); }, 200);
+  });
+}
+function setHomeTab(tab) {
+  homeTab = tab;
+  $('tab-map').classList.toggle('active', tab === 'map');
+  $('tab-list').classList.toggle('active', tab === 'list');
+  $('tab-map').setAttribute('aria-selected', String(tab === 'map'));
+  $('tab-list').setAttribute('aria-selected', String(tab === 'list'));
+  $('home-map').hidden = tab !== 'map';
+  $('home-list').hidden = tab !== 'list';
+  if (tab === 'map') drawMap();
+}
+/* an unclaimed star near the camera, for the "+ New star" button */
+function pickUnnamedNear(wx, wy) {
+  for (let ring = 0; ring < 8; ring++) {
+    const sx = Math.floor((wx + (Math.random() - 0.5) * 700 * (ring + 1)) / SECTOR);
+    const sy = Math.floor((wy + (Math.random() - 0.5) * 700 * (ring + 1)) / SECTOR);
+    const cands = getSector(sx, sy).filter((st) => !nearClaimed(st.wx, st.wy, 26));
+    if (cands.length) {
+      const c = cands[Math.floor(Math.random() * cands.length)];
+      return { worldX: c.wx, worldY: c.wy };
+    }
+  }
+  return { worldX: wx + (Math.random() - 0.5) * 400, worldY: wy + (Math.random() - 0.5) * 400 };
+}
+/* older saves only have viewport-fraction positions; give them world coords */
+async function ensureWorldCoords() {
+  const spaces = await store.spaces.all();
+  for (const s of spaces) {
+    if (typeof s.worldX !== 'number' || typeof s.worldY !== 'number') {
+      s.worldX = (typeof s.starX === 'number' ? s.starX : Math.random()) * 2000;
+      s.worldY = (typeof s.starY === 'number' ? s.starY : Math.random()) * 2000;
+      await store.spaces.put(s);
+    }
+  }
+}
+
+async function renderSpaces() {
+  const spaces = await store.spaces.all();
+  spaces.sort((a, b) => b.createdAt - a.createdAt);
+  SKY.mine = spaces;
+
+  const rows = $('list-rows');
+  rows.innerHTML = '';
+  for (const s of spaces) {
+    const b = document.createElement('button');
+    b.className = 'star-row';
+    b.type = 'button';
+    b.style.setProperty('--hue', s.hue || '255, 220, 180');
+    b.setAttribute('aria-label', `Open star ${s.name}`);
+    b.innerHTML = `<span class="star-row-dot"></span><span class="star-row-text">` +
+      `<span class="star-row-name">${esc(s.name)}</span>` +
+      (s.dates ? `<span class="star-row-sub">${esc(s.dates)}</span>` : '') +
+      `</span><span class="star-row-go" aria-hidden="true">→</span>`;
+    b.addEventListener('click', () => openSpace(s.id));
+    rows.appendChild(b);
+  }
+
+  $('map-hint').textContent = spaces.length
+    ? 'Drag to explore · tap your star to open it · tap another to name it'
+    : 'This sky is empty — tap any star to claim it';
+  if (homeTab === 'map' && !$('view-spaces').hidden) drawMap();
+}
 
 async function openSpace(id, updateHash = true) {
   if (updateHash) {
@@ -1250,13 +1480,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   (async () => {
     await ensureStarPositions(); // older saves get a pinned star
+    await ensureWorldCoords(); // older saves get map coordinates
     await renderSpaces();
     await syncSky();
+    recenterMap(); // start the sky on your stars
     const deepId = spaceIdFromHash();
     if (deepId) openSpace(deepId, false);
     else showView('spaces');
   })();
 
+  initMap();
+  $('tab-map').addEventListener('click', () => setHomeTab('map'));
+  $('tab-list').addEventListener('click', () => setHomeTab('list'));
   $('btn-new-space').addEventListener('click', () => openSpaceDialog(null));
   $('btn-cancel-space').addEventListener('click', closeSpaceDialog);
   $('f-photo').addEventListener('change', async (e) => {
@@ -1281,6 +1516,10 @@ document.addEventListener('DOMContentLoaded', () => {
       closeSpaceDialog();
       await renderSpace();
     } else {
+      const wpos = pendingStarPos || pickUnnamedNear(SKY.cam.x, SKY.cam.y);
+      pendingStarPos = null;
+      let screen = pendingStarScreen;
+      pendingStarScreen = null;
       const rec = {
         id: uid(), name,
         dates: $('f-dates').value.trim(),
@@ -1288,12 +1527,25 @@ document.addEventListener('DOMContentLoaded', () => {
         photo: dialogPhotoDataUrl,
         ...pickStarPosition(await store.spaces.all()),
         hue: pickHue(),
+        worldX: wpos.worldX,
+        worldY: wpos.worldY,
         createdAt: Date.now(),
       };
       await store.spaces.put(rec);
       closeSpaceDialog();
       await renderSpaces();
-      await playStarBirthAnimation({ x: rec.starX, y: rec.starY, hue: rec.hue, name: rec.name });
+      // swing the map to the new star (under the cinematic fade) so the birth plays where you look
+      document.body.classList.add('cinematic');
+      SKY.cam.x = rec.worldX; SKY.cam.y = rec.worldY;
+      if (homeTab !== 'map') setHomeTab('map'); else drawMap();
+      if (!screen) {
+        const r = mapEl().getBoundingClientRect();
+        screen = {
+          x: (r.left + r.width / 2) / window.innerWidth,
+          y: (r.top + r.height / 2) / window.innerHeight,
+        };
+      }
+      await playStarBirthAnimation({ x: screen.x, y: screen.y, hue: rec.hue, name: rec.name });
       await syncSky();
       openSpace(rec.id);
     }

@@ -272,57 +272,90 @@ dialog h2 { margin: 0 0 1rem; font-size: 1.3rem; }
   color: #f5efe2 !important;
 }
 
-/* ---------- star chart (tap a star in your sky) ---------- */
-.star-map {
-  position: relative;
-  height: min(56vh, 460px);
-  min-height: 330px;
+/* ---------- home: map / list toggle ---------- */
+.view-toggle {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--line);
-  border-radius: 20px;
-  overflow: hidden;
-  background: radial-gradient(120% 100% at 50% 0%, #101736 0%, #0a0f24 55%, #060912 100%);
-  margin: 0.4rem 0 1.1rem;
-  touch-action: manipulation;
+  border-radius: 999px;
+  padding: 0.25rem;
+  margin: 0 auto 0.9rem;
+  width: max-content;
 }
-.map-canvas {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-}
-.map-star {
-  position: absolute;
-  width: 64px; height: 64px; /* generous touch target on mobile */
-  transform: translate(-50%, -50%);
-  background: none; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  padding: 0;
+.view-tab {
+  border: none; background: none; cursor: pointer;
+  color: var(--muted);
+  font: inherit; font-size: 0.88rem; font-weight: 600;
+  padding: 0.45rem 1.6rem;
+  border-radius: 999px;
   -webkit-tap-highlight-color: transparent;
 }
-.map-star-dot {
-  width: 15px; height: 15px; border-radius: 50%;
-  background: radial-gradient(circle, #fff 0%, rgba(var(--hue, 255, 220, 180), 0.95) 45%, rgba(var(--hue, 255, 220, 180), 0) 72%);
-  box-shadow: 0 0 14px 4px rgba(var(--hue, 255, 220, 180), 0.5);
-  animation: map-twinkle 3.2s ease-in-out infinite;
-  pointer-events: none;
+.view-tab.active {
+  background: #ece7d9; color: #141824;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
-.map-star:active .map-star-dot { transform: scale(1.35); }
-.map-star-name {
-  position: absolute; top: calc(50% + 17px); left: 50%;
-  transform: translateX(-50%);
-  max-width: 112px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: #f5efe2; font-size: 0.78rem; letter-spacing: 0.02em;
+
+/* ---------- interactive sky map (edge to edge, no box) ---------- */
+.home-map {
+  position: relative;
+  margin: 0 -1.1rem; /* break out of the view padding: the sky fills the screen */
+  height: calc(100dvh - 248px);
+  min-height: 400px;
+  overflow: hidden;
+  touch-action: none;
+  background: radial-gradient(130% 100% at 50% 0%, #0d1430 0%, #080d20 55%, #05070f 100%);
+}
+#mapview-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block;
+}
+.map-controls {
+  position: absolute; right: 0.9rem; bottom: 3.2rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.map-controls button {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 14, 32, 0.72);
+  color: #ece7d9; font-size: 1.25rem; line-height: 1;
+  cursor: pointer; backdrop-filter: blur(4px);
+  -webkit-tap-highlight-color: transparent;
+}
+.map-controls button:active { transform: scale(0.92); }
+.map-hint {
+  position: absolute; left: 0; right: 0; bottom: 0.9rem;
+  margin: 0; text-align: center;
+  color: rgba(236, 231, 217, 0.6); font-size: 0.76rem; letter-spacing: 0.04em;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
   pointer-events: none;
+  padding: 0 1rem;
 }
-@keyframes map-twinkle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+
+/* ---------- star list ---------- */
+.home-list { padding-bottom: 0.5rem; }
+.star-row {
+  display: flex; align-items: center; gap: 0.9rem;
+  width: 100%; text-align: left;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 16px; padding: 0.85rem 1rem;
+  margin-bottom: 0.6rem; cursor: pointer;
+  font: inherit; color: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
-.map-hint {
-  position: absolute; bottom: 0.7rem; left: 0; right: 0;
-  margin: 0; text-align: center;
-  color: var(--muted); font-size: 0.75rem; letter-spacing: 0.06em;
-  pointer-events: none;
+.star-row:active { transform: scale(0.99); }
+.star-row-dot {
+  flex: none; width: 13px; height: 13px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, rgba(var(--hue, 255, 220, 180), 0.95) 55%, rgba(var(--hue, 255, 220, 180), 0) 75%);
+  box-shadow: 0 0 10px 3px rgba(var(--hue, 255, 220, 180), 0.5);
 }
+.star-row-text { flex: 1; min-width: 0; }
+.star-row-name {
+  display: block; font-weight: 600; font-size: 1rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.star-row-sub { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 0.1rem; }
+.star-row-go { color: var(--muted); font-size: 1.1rem; }
 
 /* ---------- dark starry space view ---------- */
 #starfield {
