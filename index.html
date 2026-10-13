@@ -30,7 +30,7 @@
 <main id="view-spaces" class="view">
   <div id="spaces-empty" class="empty" hidden>
     <p class="empty-title">No spaces yet</p>
-    <p class="empty-sub">Create a space — for someone you miss, or for yourself.<br>A place to keep the words flowing.</p>
+    <p class="empty-sub">Create a space — for someone you've lost, a chapter of your life,<br>or just yourself. A place to keep the words flowing.</p>
   </div>
   <div id="spaces-grid" class="spaces-grid"></div>
   <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New space</button>
@@ -81,8 +81,8 @@
   <form id="space-form" method="dialog">
     <h2 id="space-dialog-title">New space</h2>
     <label class="field">
-      <span>Their name *</span>
-      <input id="f-name" type="text" required maxlength="80" autocomplete="off" placeholder="e.g. Ammachi">
+      <span>Name *</span>
+      <input id="f-name" type="text" required maxlength="80" autocomplete="off" placeholder="e.g. Ammachi, or “Morning pages”">
     </label>
     <label class="field">
       <span>Photo</span>
@@ -95,8 +95,8 @@
       </label>
     </div>
     <label class="field">
-      <span>One-line dedication</span>
-      <input id="f-dedication" type="text" maxlength="140" autocomplete="off" placeholder="e.g. Forever in our hearts">
+      <span>About this space</span>
+      <input id="f-dedication" type="text" maxlength="140" autocomplete="off" placeholder="e.g. Letters I never sent">
     </label>
     <div class="dialog-actions">
       <button type="button" id="btn-cancel-space" class="btn btn-ghost">Cancel</button>
