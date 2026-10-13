@@ -151,8 +151,8 @@ function initStarfield() {
       const px = s.x * W, py = s.y * H;
       if (s.hero) {
         ctx.save();
-        ctx.shadowColor = `rgba(${s.hue}, 0.9)`;
-        ctx.shadowBlur = 12;
+        ctx.shadowColor = `rgba(${s.hue}, 0.85)`;
+        ctx.shadowBlur = 5;
         ctx.beginPath();
         ctx.arc(px, py, s.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${s.hue}, ${a})`;
