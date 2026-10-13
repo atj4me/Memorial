@@ -502,6 +502,19 @@ function recenterMap() {
 function buzz(ms) {
   try { if (navigator.vibrate) navigator.vibrate(ms); } catch (_) {}
 }
+function pickStar(sx, sy) {
+  const wpt = screenToWorld(sx, sy);
+  const tol = 38 / SKY.cam.zoom;
+  for (const s of SKY.mine) {
+    if (typeof s.worldX !== 'number') continue;
+    if (Math.hypot(s.worldX - wpt.x, s.worldY - wpt.y) < tol) return s;
+  }
+  for (const st of visibleSkyStars()) {
+    if (Math.hypot(st.wx - wpt.x, st.wy - wpt.y) < tol) return st;
+  }
+  return null;
+}
+
 function handleMapTap(e) {
   const canvas = $('mapview-canvas');
   const rect = canvas.getBoundingClientRect();
@@ -598,6 +611,19 @@ function initMap() {
   };
   canvas.addEventListener('pointerup', (e) => release(e, false));
   canvas.addEventListener('pointercancel', (e) => release(e, true));
+
+  // desktop hover: pointer cursor over tappable stars (one hit-test per frame)
+  let hoverRaf = 0, hoverX = 0, hoverY = 0;
+  canvas.addEventListener('mousemove', (e) => {
+    if (pointers.size > 0) return; // dragging — leave the grab cursor alone
+    const p = toLocal(e);
+    hoverX = p.x; hoverY = p.y;
+    if (hoverRaf) return;
+    hoverRaf = requestAnimationFrame(() => {
+      hoverRaf = 0;
+      canvas.style.cursor = pickStar(hoverX, hoverY) ? 'pointer' : '';
+    });
+  });
 
   $('map-zoom-in').addEventListener('click', () => {
     SKY.cam.zoom = Math.min(2.5, SKY.cam.zoom * 1.3); drawMap();
