@@ -296,12 +296,21 @@ dialog h2 { margin: 0 0 1rem; font-size: 1.3rem; }
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
+/* ---------- home: fullscreen sky ---------- */
+.view-home { max-width: none; padding: 0; }
+.home-toggle {
+  position: absolute; top: 0.85rem; left: 50%; transform: translateX(-50%);
+  z-index: 10; margin: 0;
+  background: rgba(10, 14, 32, 0.62);
+  border-color: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+
 /* ---------- interactive sky map (edge to edge, no box) ---------- */
 .home-map {
   position: relative;
-  margin: 0 -1.1rem; /* break out of the view padding: the sky fills the screen */
-  height: calc(100dvh - 248px);
-  min-height: 400px;
+  height: calc(100dvh - 64px);
+  min-height: 430px;
   overflow: hidden;
   touch-action: none;
   background: radial-gradient(130% 100% at 50% 0%, #0d1430 0%, #080d20 55%, #05070f 100%);
@@ -311,8 +320,9 @@ dialog h2 { margin: 0 0 1rem; font-size: 1.3rem; }
   display: block;
 }
 .map-controls {
-  position: absolute; right: 0.9rem; bottom: 3.2rem;
+  position: absolute; right: 1rem; bottom: 8.4rem;
   display: flex; flex-direction: column; gap: 0.5rem;
+  z-index: 6;
 }
 .map-controls button {
   width: 44px; height: 44px; border-radius: 50%;
@@ -331,9 +341,23 @@ dialog h2 { margin: 0 0 1rem; font-size: 1.3rem; }
   pointer-events: none;
   padding: 0 1rem;
 }
+.map-fab {
+  position: absolute; right: 1rem; bottom: 3.4rem; z-index: 6;
+  width: 58px; height: 58px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: linear-gradient(135deg, #9d6bf7, #e35df0);
+  color: #fff; font-size: 1.7rem; line-height: 1;
+  box-shadow: 0 8px 28px rgba(217, 70, 239, 0.5);
+  -webkit-tap-highlight-color: transparent;
+}
+.map-fab:active { transform: scale(0.92); }
 
 /* ---------- star list ---------- */
-.home-list { padding-bottom: 0.5rem; }
+.home-list {
+  max-width: 720px; margin: 0 auto; width: 100%;
+  padding: 4.4rem 1.1rem 1.5rem;
+  min-height: calc(100dvh - 64px);
+}
 .star-row {
   display: flex; align-items: center; gap: 0.9rem;
   width: 100%; text-align: left;

@@ -19,7 +19,7 @@
     } catch (e) {}
   })();
 </script>
-<link rel="stylesheet" href="styles.css?v=16">
+<link rel="stylesheet" href="styles.css?v=17">
 </head>
 <body>
 
@@ -42,8 +42,8 @@
 </p>
 
 <!-- ============ HOME: MAP + LIST ============ -->
-<main id="view-spaces" class="view">
-  <div class="view-toggle" role="tablist" aria-label="Choose view">
+<main id="view-spaces" class="view view-home">
+  <div class="view-toggle home-toggle" role="tablist" aria-label="Choose view">
     <button id="tab-map" class="view-tab active" role="tab" aria-selected="true" type="button">Map</button>
     <button id="tab-list" class="view-tab" role="tab" aria-selected="false" type="button">List</button>
   </div>
@@ -55,11 +55,12 @@
       <button id="map-recenter" type="button" aria-label="Go to my stars">⌂</button>
     </div>
     <p class="map-hint" id="map-hint">Drag to explore the sky · tap a star to claim it</p>
+    <button id="btn-new-space-fab" class="map-fab" type="button" aria-label="Name a new star">+</button>
   </section>
   <section id="home-list" class="home-list" hidden aria-label="Star list">
     <div id="list-rows"></div>
+    <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New star</button>
   </section>
-  <button id="btn-new-space" class="btn btn-primary btn-new-space" type="button">+ New star</button>
 </main>
 
 <!-- ============ STAR DETAIL ============ -->
@@ -132,6 +133,6 @@
 </dialog>
 
 <script src="vendor/sweetalert2.min.js?v=1"></script>
-<script src="app.js?v=23"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>

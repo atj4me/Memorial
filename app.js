@@ -1493,6 +1493,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('tab-map').addEventListener('click', () => setHomeTab('map'));
   $('tab-list').addEventListener('click', () => setHomeTab('list'));
   $('btn-new-space').addEventListener('click', () => openSpaceDialog(null));
+  $('btn-new-space-fab').addEventListener('click', () => openSpaceDialog(null));
   $('btn-cancel-space').addEventListener('click', closeSpaceDialog);
   $('f-photo').addEventListener('change', async (e) => {
     const f = e.target.files[0];
